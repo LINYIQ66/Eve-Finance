@@ -367,13 +367,13 @@ export default function Account() {
           </motion.div>
           
           <Tabs defaultValue="kyc" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-6 bg-white shadow-lg">
-                <TabsTrigger value="kyc" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><UserCheck className="w-4 h-4 mr-2" />KYC</TabsTrigger>
-                <TabsTrigger value="inventory" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><Package className="w-4 h-4 mr-2" />My Inventory</TabsTrigger>
-                <TabsTrigger value="funds" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><UserIcon className="w-4 h-4 mr-2" />Fund Management</TabsTrigger>
-                <TabsTrigger value="activity" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><Activity className="w-4 h-4 mr-2" />Activity</TabsTrigger>
-                <TabsTrigger value="statements" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><FileText className="w-4 h-4 mr-2" />Statements</TabsTrigger>
-                <TabsTrigger value="support" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><LifeBuoy className="w-4 h-4 mr-2" />Support</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 bg-white shadow-lg">
+                <TabsTrigger value="kyc" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs md:text-sm"><UserCheck className="w-3 h-3 md:w-4 md:h-4 mr-1" />KYC</TabsTrigger>
+                <TabsTrigger value="inventory" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs md:text-sm"><Package className="w-3 h-3 md:w-4 md:h-4 mr-1" />Inventory</TabsTrigger>
+                <TabsTrigger value="funds" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs md:text-sm"><UserIcon className="w-3 h-3 md:w-4 md:h-4 mr-1" />Funds</TabsTrigger>
+                <TabsTrigger value="activity" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs md:text-sm"><Activity className="w-3 h-3 md:w-4 md:h-4 mr-1" />Activity</TabsTrigger>
+                <TabsTrigger value="statements" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs md:text-sm"><FileText className="w-3 h-3 md:w-4 md:h-4 mr-1" />Statement</TabsTrigger>
+                <TabsTrigger value="support" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs md:text-sm"><LifeBuoy className="w-3 h-3 md:w-4 md:h-4 mr-1" />Support</TabsTrigger>
             </TabsList>
 
             <TabsContent value="kyc">
