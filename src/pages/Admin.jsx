@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { User, Transaction, Loan, AuditLog, FundRequest, SystemSetting, PhysicalProduct, PhysicalRedemption, SupportTicket } from "@/entities/all"; // Added SupportTicket
 import { SendEmail } from "@/integrations/Core";
@@ -18,7 +17,8 @@ import FundManagement from "../components/admin/FundManagement";
 import StatementGenerator from "../components/admin/StatementGenerator";
 import PhysicalInventory from "../components/admin/PhysicalInventory";
 import DeliveryRequests from "../components/admin/DeliveryRequests";
-import SupportTicketReview from "../components/admin/SupportTicketReview"; // New import
+import SupportTicketReview from "../components/admin/SupportTicketReview";
+import AnalyticsReport from "../components/admin/AnalyticsReport";
 
 export default function Admin() {
   const [adminUser, setAdminUser] = useState(null);
@@ -409,7 +409,7 @@ export default function Admin() {
           <Card className="bg-gradient-to-r from-cyan-600 to-sky-600 text-white border-0 shadow-lg"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-cyan-100 mb-2">Pending Deposits</p><p className="text-3xl font-bold">{metrics.pendingDeposits}</p></div><Landmark className="w-8 h-8 text-cyan-200" /></div></CardContent></Card>
         </motion.div>
         <Tabs defaultValue="kyc" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-10 bg-white shadow-lg">
+          <TabsList className="grid w-full grid-cols-11 bg-white shadow-lg">
             <TabsTrigger value="kyc" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><FileText className="w-4 h-4 mr-2" />KYC</TabsTrigger>
             <TabsTrigger value="funds" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><Landmark className="w-4 h-4 mr-2" />Funds</TabsTrigger>
             <TabsTrigger value="tickets" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><MessageSquare className="w-4 h-4 mr-2" />Tickets</TabsTrigger>
@@ -417,6 +417,7 @@ export default function Admin() {
             <TabsTrigger value="manage" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><DollarSign className="w-4 h-4 mr-2" />Manage</TabsTrigger>
             <TabsTrigger value="physical" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><Package className="w-4 h-4 mr-2" />Inventory</TabsTrigger>
             <TabsTrigger value="activity" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><TrendingUp className="w-4 h-4 mr-2" />Logs</TabsTrigger>
+            <TabsTrigger value="reports" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><TrendingUp className="w-4 h-4 mr-2" />Reports</TabsTrigger>
             <TabsTrigger value="statements" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><FileText className="w-4 h-4 mr-2" />Statements</TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><Users className="w-4 h-4 mr-2" />Users</TabsTrigger>
             <TabsTrigger value="system" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"><Settings className="w-4 h-4 mr-2" />System</TabsTrigger>
@@ -428,6 +429,7 @@ export default function Admin() {
           <TabsContent value="manage"><FundManagement users={users} onAddFunds={addFundsToUser} onDeductFunds={deductFundsFromUser} isLoading={isLoading} /></TabsContent>
           <TabsContent value="physical"><PhysicalInventory products={physicalProducts} onUpdate={handleProductUpdate} onDelete={handleProductDelete} isLoading={isLoading} /></TabsContent>
           <TabsContent value="activity"><TransactionLogs transactions={transactions} isLoading={isLoading} /></TabsContent>
+          <TabsContent value="reports"><AnalyticsReport /></TabsContent>
           <TabsContent value="statements"><StatementGenerator users={users} /></TabsContent>
           <TabsContent value="users"><UserManagement users={users} isLoading={isLoading} /></TabsContent>
           <TabsContent value="system"><PaymentSettings settings={systemSettings} onUpdateSettings={updateSystemSettings} /></TabsContent>
