@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -117,6 +116,7 @@ const AppLayout = ({ children }) => {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const { t } = useLanguage();
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -148,7 +148,7 @@ const AppLayout = ({ children }) => {
     : navigationItems.filter(item => item.roles.includes('public'));
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={open} onOpenChange={setOpen}>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50">
         <Sidebar className="border-r border-slate-200/50 bg-white">
           <SidebarHeader className="border-b border-slate-200/50 p-6 bg-white">
@@ -177,6 +177,11 @@ const AppLayout = ({ children }) => {
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton 
                           asChild 
+                          onClick={() => {
+                            if (window.innerWidth < 768) {
+                              setOpen(false);
+                            }
+                          }}
                           className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 transition-all duration-300 rounded-xl mb-1 ${
                             location.pathname === item.url 
                               ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' 
