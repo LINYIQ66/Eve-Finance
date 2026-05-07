@@ -44,8 +44,29 @@ export default function USStocks() {
     try {
       if (!user) return { success: false, error: "Please log in to trade." };
 
-      // Limit orders: record as pending, no balance change, no fee, no EVE reward
+      // Limit orders: freeze funds and record as pending
       if (orderType === "limit") {
+        const newBalances = { ...(user.wallet_balances || {}) };
+        const stockKey = symbol.toLowerCase();
+        const currencyKey = currency.toLowerCase();
+
+        if (side === "buy") {
+          // Freeze the USDT/USD to spend
+          const newCurrBal = (newBalances[currencyKey] || 0) - calc.spent;
+          if (newCurrBal < -1e-9) return { success: false, error: `Insufficient ${currency} balance.` };
+          newBalances[currencyKey] = Math.max(0, newCurrBal);
+          // Track frozen amount
+          const frozenKey = `frozen_${currencyKey}`;
+          newBalances[frozenKey] = (newBalances[frozenKey] || 0) + calc.spent;
+        } else {
+          // Freeze the shares to sell
+          const newShares = (newBalances[stockKey] || 0) - calc.shares;
+          if (newShares < -1e-9) return { success: false, error: `Insufficient ${symbol} balance.` };
+          newBalances[stockKey] = Math.max(0, newShares);
+          const frozenKey = `frozen_${stockKey}`;
+          newBalances[frozenKey] = (newBalances[frozenKey] || 0) + calc.shares;
+        }
+
         await Transaction.create({
           transaction_type: "swap",
           user_email: user.email,
@@ -55,9 +76,18 @@ export default function USStocks() {
           fee_usd: 0,
           exchange_rate: calc.execPrice,
           status: "pending",
-          description: `Limit ${side} @ $${calc.execPrice.toFixed(2)} — awaiting execution`,
+          description: JSON.stringify({
+            limitPrice: calc.execPrice,
+            side,
+            shares: side === "buy" ? calc.sharesReceived : calc.shares,
+            currency,
+            symbol,
+          }),
         });
-        return { success: true, message: `Limit order placed @ $${calc.execPrice.toFixed(2)}. Pending execution.` };
+
+        await User.updateMyUserData({ wallet_balances: newBalances });
+        await refreshUser();
+        return { success: true, message: `Limit ${side} order placed @ $${calc.execPrice.toFixed(2)}. Funds frozen, awaiting execution.` };
       }
 
       // Market orders: execute immediately

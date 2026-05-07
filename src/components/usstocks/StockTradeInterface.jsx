@@ -43,6 +43,7 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
   const usdtBalance = user?.wallet_balances?.usdt || 0;
   const usdBalance = user?.wallet_balances?.usd || 0;
   const stockBalance = user?.wallet_balances?.[selectedSymbol.toLowerCase()] || 0;
+  // Available = actual balance (frozen funds are already deducted when limit order is placed)
   const payBalance = currency === "USDT" ? usdtBalance : usdBalance;
 
   const execPrice = orderType === "market"
