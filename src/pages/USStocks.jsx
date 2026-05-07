@@ -8,6 +8,7 @@ import StockChart from "../components/usstocks/StockChart";
 import StockMarketOverview from "../components/usstocks/StockMarketOverview";
 import StockTradeInterface from "../components/usstocks/StockTradeInterface";
 import StockHoldings from "../components/usstocks/StockHoldings";
+import StockTradeHistory from "../components/usstocks/StockTradeHistory";
 
 const FEE_RATE = 0.001; // 0.1%
 
@@ -16,6 +17,7 @@ export default function USStocks() {
   const [user, setUser] = useState(null);
   const [livePrice, setLivePrice] = useState(null);
   const [allPrices, setAllPrices] = useState({});
+  const [transactions, setTransactions] = useState([]);
 
   const refreshUser = async () => {
     try {
@@ -24,8 +26,17 @@ export default function USStocks() {
     } catch {}
   };
 
+  const loadTransactions = async () => {
+    try {
+      const u = await User.me();
+      const txs = await Transaction.filter({ user_email: u.email }, "-created_date", 200);
+      setTransactions(txs);
+    } catch {}
+  };
+
   useEffect(() => {
     refreshUser();
+    loadTransactions();
   }, []);
 
   // Reset livePrice when symbol changes
@@ -87,6 +98,7 @@ export default function USStocks() {
 
         await User.updateMyUserData({ wallet_balances: newBalances });
         await refreshUser();
+        loadTransactions();
         return { success: true, message: `Limit ${side} order placed @ $${calc.execPrice.toFixed(2)}. Funds frozen, awaiting execution.` };
       }
 
@@ -138,6 +150,7 @@ export default function USStocks() {
 
       await User.updateMyUserData({ wallet_balances: newBalances });
       await refreshUser();
+      loadTransactions();
 
       const received = side === "buy"
         ? `${calc.sharesReceived.toFixed(6)} ${symbol}`
@@ -219,7 +232,9 @@ export default function USStocks() {
               user={user}
               prices={allPrices}
               onSymbolClick={setSelectedSymbol}
+              transactions={transactions}
             />
+            <StockTradeHistory transactions={transactions} />
           </motion.div>
 
           <motion.div
