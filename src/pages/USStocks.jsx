@@ -9,6 +9,7 @@ import StockMarketOverview from "../components/usstocks/StockMarketOverview";
 import StockTradeInterface from "../components/usstocks/StockTradeInterface";
 import StockHoldings from "../components/usstocks/StockHoldings";
 import StockTradeHistory from "../components/usstocks/StockTradeHistory";
+import USStocksFooter from "../components/usstocks/USStocksFooter";
 
 const FEE_RATE = 0.001; // 0.1%
 
@@ -215,12 +216,11 @@ export default function USStocks() {
         </div>
 
         {/* Trade Interface */}
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="space-y-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="lg:col-span-2 space-y-4"
           >
             <StockTradeInterface
               user={user}
@@ -228,55 +228,30 @@ export default function USStocks() {
               livePrice={livePrice}
               onTrade={handleTrade}
             />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+          >
             <StockHoldings
               user={user}
               prices={allPrices}
               onSymbolClick={setSelectedSymbol}
               transactions={transactions}
             />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
             <StockTradeHistory transactions={transactions} />
           </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.25 }}
-          >
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-6 shadow-lg h-full">
-              <h3 className="text-base font-bold mb-4">Trading Info</h3>
-              <div className="space-y-3 text-blue-100 text-sm">
-                <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p>Real-time prices for tokenized US stocks on EVE FINANCE</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p>Buy with USDT from your wallet, sell back to USDT anytime</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p>0.1% fee applies on all trades. Earn 100 EVE per $1 in fees</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p>Click any stock on the right to view its chart and start trading</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p>Fractional trading supported — trade any amount of USDT</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p><strong className="text-white">Market Order:</strong> Executes at current price instantly</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p><strong className="text-white">Limit Order:</strong> Set your target price for execution</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
         </div>
+
+        {/* Footer */}
+        <USStocksFooter />
       </div>
     </div>
   );
