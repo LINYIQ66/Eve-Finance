@@ -58,6 +58,7 @@ import Statement from './pages/Statement';
 import Physical from './pages/Physical';
 import Guide from './pages/Guide';
 import DailyStatement from './pages/DailyStatement';
+import USStocks from './pages/USStocks';
 import __Layout from './Layout.jsx';
 
 
@@ -73,6 +74,7 @@ export const PAGES = {
     "Physical": Physical,
     "Guide": Guide,
     "DailyStatement": DailyStatement,
+    "USStocks": USStocks,
 }
 
 export const pagesConfig = {

@@ -15,7 +15,8 @@ import {
   BookOpen,
   FileText,
   Languages,
-  ChevronDown
+  ChevronDown,
+  BarChart2
 } from "lucide-react";
 import {
   Sidebar,
@@ -173,6 +174,7 @@ const AppLayout = ({ children }) => {
     { title: t('sidebar.account'), url: createPageUrl("Account"), icon: UserCheck, roles: ['user', 'admin'] },
     { title: t('sidebar.statement'), url: createPageUrl("DailyStatement"), icon: FileText, roles: ['user', 'admin'] },
     { title: t('sidebar.guide'), url: createPageUrl("Guide"), icon: BookOpen, roles: ['public', 'user', 'admin'] },
+    { title: "US Stocks", url: createPageUrl("USStocks"), icon: BarChart2, roles: ['user', 'admin'] },
     { title: t('sidebar.admin'), url: createPageUrl("Admin"), icon: Settings, roles: ['admin'] },
   ];
 
