@@ -8,51 +8,64 @@ import StockChart from "../components/usstocks/StockChart";
 import StockMarketOverview from "../components/usstocks/StockMarketOverview";
 import StockTradeInterface from "../components/usstocks/StockTradeInterface";
 
+const FEE_RATE = 0.001; // 0.1%
+
 export default function USStocks() {
   const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
   const [user, setUser] = useState(null);
-  const [userLoaded, setUserLoaded] = useState(false);
+  const [livePrice, setLivePrice] = useState(null);
 
-  // Lazy-load user on mount
   useEffect(() => {
-    User.me().then(u => {
-      setUser(u);
-      setUserLoaded(true);
-    }).catch(() => setUserLoaded(true));
+    User.me().then(setUser).catch(() => {});
   }, []);
 
-  const handleTrade = async (side, symbol, amount, price, calc) => {
+  // Reset livePrice when symbol changes
+  useEffect(() => {
+    setLivePrice(null);
+  }, [selectedSymbol]);
+
+  /**
+   * handleTrade is called with the already-computed calc object from StockTradeInterface.
+   * BUY:  calc = { spent, fee, sharesReceived, execPrice }
+   *       Deduct `spent` USDT, add `sharesReceived` shares
+   * SELL: calc = { shares, gross, fee, netUsdt, execPrice }
+   *       Deduct `shares` stock, add `netUsdt` USDT
+   */
+  const handleTrade = async (side, symbol, calc) => {
     try {
       if (!user) return { success: false, error: "Please log in to trade." };
 
       const newBalances = { ...(user.wallet_balances || {}) };
       const stockKey = symbol.toLowerCase();
-      const feeUsd = side === "buy" ? calc.fee : calc.fee;
 
       if (side === "buy") {
-        // Deduct USDT, add stock
-        newBalances.usdt = (newBalances.usdt || 0) - amount;
-        newBalances[stockKey] = (newBalances[stockKey] || 0) + calc.netUnits;
+        const newUsdt = (newBalances.usdt || 0) - calc.spent;
+        if (newUsdt < 0) return { success: false, error: "Insufficient USDT balance." };
+        newBalances.usdt = newUsdt;
+        newBalances[stockKey] = (newBalances[stockKey] || 0) + calc.sharesReceived;
       } else {
-        // Deduct stock, add USDT
-        newBalances[stockKey] = (newBalances[stockKey] || 0) - amount;
+        const newShares = (newBalances[stockKey] || 0) - calc.shares;
+        if (newShares < 0) return { success: false, error: `Insufficient ${symbol} balance.` };
+        newBalances[stockKey] = newShares;
         newBalances.usdt = (newBalances.usdt || 0) + calc.netUsdt;
       }
 
       // EVE reward: 100 EVE per $1 fee
+      const feeUsd = calc.fee;
       const eveReward = feeUsd * 100;
       if (eveReward > 0) {
         newBalances.eve = (newBalances.eve || 0) + eveReward;
       }
 
+      // Record transaction
       await Transaction.create({
         transaction_type: "swap",
         user_email: user.email,
         from_asset: side === "buy" ? "USDT" : symbol,
         to_asset: side === "buy" ? symbol : "USDT",
-        amount_usd: side === "buy" ? amount : calc.gross,
+        amount_usd: side === "buy" ? calc.spent : calc.gross,
         fee_usd: feeUsd,
-        exchange_rate: price,
+        exchange_rate: calc.execPrice,
         status: "completed",
       });
 
@@ -68,12 +81,12 @@ export default function USStocks() {
       }
 
       await User.updateMyUserData({ wallet_balances: newBalances });
-      const updatedUser = await User.me();
-      setUser(updatedUser);
+      const updated = await User.me();
+      setUser(updated);
 
       const received = side === "buy"
-        ? `${calc.netUnits.toFixed(6)} ${symbol}`
-        : `${calc.netUsdt.toFixed(4)} USDT`;
+        ? `${calc.sharesReceived.toFixed(6)} ${symbol}`
+        : `$${calc.netUsdt.toFixed(2)} USDT`;
 
       return { success: true, message: `${side === "buy" ? "Bought" : "Sold"} successfully! Received ${received}` };
     } catch (error) {
@@ -82,40 +95,38 @@ export default function USStocks() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4"
+          transition={{ duration: 0.5 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-3"
         >
           <div>
             <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 to-blue-900 bg-clip-text text-transparent">
               US Stocks
             </h1>
-            <p className="text-slate-600 mt-2">Trade tokenized US stocks with live Binance pricing</p>
+            <p className="text-slate-500 mt-1 text-sm">Tokenized US stocks via Binance · 0.1% fee</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge className="bg-green-100 text-green-800">
-              <Zap className="w-3 h-3 mr-1" />
-              Live WebSocket
+          <div className="flex items-center gap-2">
+            <Badge className="bg-green-100 text-green-800 text-xs">
+              <Zap className="w-3 h-3 mr-1" /> Live Prices
             </Badge>
-            <Badge className="bg-blue-100 text-blue-800">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              0.5% Fee
+            <Badge className="bg-blue-100 text-blue-800 text-xs">
+              <TrendingUp className="w-3 h-3 mr-1" /> 0.1% Fee
             </Badge>
           </div>
         </motion.div>
 
         {/* Chart + Market List */}
-        <div className="grid lg:grid-cols-3 gap-8 mb-8">
+        <div className="grid lg:grid-cols-3 gap-6 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="lg:col-span-2 h-[560px]"
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="lg:col-span-2 h-[520px]"
           >
             <StockChart symbol={selectedSymbol} />
           </motion.div>
@@ -123,27 +134,29 @@ export default function USStocks() {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="h-[560px]"
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="h-[520px]"
           >
             <StockMarketOverview
               onStockClick={setSelectedSymbol}
               selectedSymbol={selectedSymbol}
+              onPriceUpdate={setLivePrice}
             />
           </motion.div>
         </div>
 
         {/* Trade Interface */}
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
             className="lg:col-span-2"
           >
             <StockTradeInterface
-              user={userLoaded ? user : null}
+              user={user}
               selectedSymbol={selectedSymbol}
+              livePrice={livePrice}
               onTrade={handleTrade}
             />
           </motion.div>
@@ -151,30 +164,34 @@ export default function USStocks() {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
           >
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-6 h-full shadow-lg">
-              <h3 className="text-lg font-bold mb-4">Trading Info</h3>
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-6 shadow-lg h-full">
+              <h3 className="text-base font-bold mb-4">How It Works</h3>
               <div className="space-y-3 text-blue-100 text-sm">
                 <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-300 rounded-full mt-1.5 flex-shrink-0" />
-                  <p>Prices sourced via Binance WebSocket for tokenized US stocks (BUSDT pairs)</p>
+                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
+                  <p><strong className="text-white">Buy:</strong> Enter USDT amount → platform deducts fee (0.1%) → you receive shares</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-300 rounded-full mt-1.5 flex-shrink-0" />
-                  <p>Buy with USDT from your wallet, sell back to USDT anytime</p>
+                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
+                  <p><strong className="text-white">Sell:</strong> Enter share quantity → gross value calculated → fee deducted → you receive USDT</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-300 rounded-full mt-1.5 flex-shrink-0" />
-                  <p>0.5% fee applies on all trades. Earn 100 EVE per $1 in fees</p>
+                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
+                  <p><strong className="text-white">Market Order:</strong> Executes instantly at current price</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-300 rounded-full mt-1.5 flex-shrink-0" />
-                  <p>Click any stock on the right to view its chart and start trading</p>
+                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
+                  <p><strong className="text-white">Limit Order:</strong> Set your target price — simulated execution at that price</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-300 rounded-full mt-1.5 flex-shrink-0" />
-                  <p>Fractional trading supported — trade any amount of USDT</p>
+                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
+                  <p>Earn <strong className="text-yellow-300">100 EVE tokens</strong> per $1 in trading fees</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
+                  <p>Fractional shares supported — trade any USDT amount</p>
                 </div>
               </div>
             </div>
