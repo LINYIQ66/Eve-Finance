@@ -10,9 +10,11 @@ import {
   Package,
   PiggyBank,
   UserCheck,
-  Languages
+  Languages,
+  BarChart2
 } from "lucide-react";
 import { motion } from "framer-motion";
+import USStocksGuide from "../components/guide/USStocksGuide";
 
 const content = {
   en: {
@@ -387,7 +389,7 @@ export default function Guide() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <Tabs defaultValue="getting-started" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-6 bg-white shadow-lg">
+            <TabsList className="grid w-full grid-cols-7 bg-white shadow-lg">
               <TabsTrigger value="getting-started" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                 <Users className="w-4 h-4 mr-2" />
                 {t.gettingStarted}
@@ -411,6 +413,11 @@ export default function Guide() {
               <TabsTrigger value="account" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                 <UserCheck className="w-4 h-4 mr-2" />
                 {t.account}
+              </TabsTrigger>
+              <TabsTrigger value="usstocks" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white relative">
+                <BarChart2 className="w-4 h-4 mr-2" />
+                US Stocks
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
               </TabsTrigger>
             </TabsList>
 
@@ -531,6 +538,10 @@ export default function Guide() {
                   ))}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="usstocks">
+              <USStocksGuide />
             </TabsContent>
           </Tabs>
         </motion.div>
