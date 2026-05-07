@@ -18,7 +18,7 @@ const US_STOCKS = new Set([
   "mu","mstr","pltr","hood","nflx","orcl","coin","baba","openai","crwv"
 ]);
 
-export default function USStockPendingOrders({ transactions = [], onRefresh, livePrice }) {
+export default function USStockPendingOrders({ transactions = [], onRefresh, livePrice, allPrices = {} }) {
   const [cancellingId, setCancellingId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editPrice, setEditPrice] = useState("");
@@ -181,12 +181,14 @@ export default function USStockPendingOrders({ transactions = [], onRefresh, liv
                   const isSaving = savingId === order.id;
                   const displaySymbol = (symbol || order.to_asset || order.from_asset || "").toUpperCase();
                   const displayPrice = parseFloat(limitPrice || order.exchange_rate || 0);
+                  // Use per-symbol price from allPrices, fall back to livePrice only if same symbol
+                  const orderMarketPrice = allPrices[displaySymbol]?.price || null;
 
                   let estimatedNote = null;
-                  if (livePrice && side === "buy") {
+                  if (orderMarketPrice && side === "buy") {
                     const sharesAtLimit = (order.amount_usd * (1 - FEE_RATE)) / displayPrice;
                     estimatedNote = `≈ ${sharesAtLimit.toFixed(6)} ${displaySymbol} at fill`;
-                  } else if (livePrice && side === "sell" && shares) {
+                  } else if (orderMarketPrice && side === "sell" && shares) {
                     const net = shares * displayPrice * (1 - FEE_RATE);
                     estimatedNote = `≈ $${net.toFixed(2)} USDT at fill`;
                   }
@@ -240,10 +242,10 @@ export default function USStockPendingOrders({ transactions = [], onRefresh, liv
                                 </span>
                                 <span className="text-slate-300">|</span>
                                 <span>Limit @ <strong className="text-slate-700">${displayPrice.toFixed(2)}</strong></span>
-                                {livePrice && (
+                                {orderMarketPrice && (
                                   <>
                                     <span className="text-slate-300">|</span>
-                                    <span>Market <strong className={livePrice >= displayPrice ? "text-green-600" : "text-red-500"}>${livePrice.toFixed(2)}</strong></span>
+                                    <span>Market <strong className={orderMarketPrice >= displayPrice ? "text-green-600" : "text-red-500"}>${orderMarketPrice.toFixed(2)}</strong></span>
                                   </>
                                 )}
                               </div>
@@ -290,7 +292,7 @@ export default function USStockPendingOrders({ transactions = [], onRefresh, liv
                           >
                             <p className="text-xs font-medium text-slate-700 mb-2">
                               Modify Limit Price
-                              {livePrice && <span className="ml-2 text-slate-400 font-normal">(Market: ${livePrice.toFixed(2)})</span>}
+                              {orderMarketPrice && <span className="ml-2 text-slate-400 font-normal">(Market: ${orderMarketPrice.toFixed(2)})</span>}
                             </p>
                             <div className="flex gap-2 items-start">
                               <div className="flex-1">

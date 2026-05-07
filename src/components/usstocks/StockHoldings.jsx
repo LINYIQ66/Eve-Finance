@@ -36,12 +36,12 @@ function calcCostBasis(transactions = []) {
     const isSell = US_STOCK_SYMBOLS.includes(fromKey);
 
     if (isBuy) {
-      // buying stock: amount_usd = gross cost, exchange_rate = price per share
+      // buying stock: amount_usd = gross spent, net shares = gross*(1-fee)/price
       const price = tx.exchange_rate || 0;
-      const shares = price > 0 ? tx.amount_usd / price : 0;
+      const shares = price > 0 ? (tx.amount_usd * (1 - 0.001)) / price : 0;
       if (!basis[toKey]) basis[toKey] = { totalShares: 0, totalCost: 0 };
       basis[toKey].totalShares += shares;
-      basis[toKey].totalCost += tx.amount_usd;
+      basis[toKey].totalCost += tx.amount_usd; // cost = what user paid
     }
 
     if (isSell) {

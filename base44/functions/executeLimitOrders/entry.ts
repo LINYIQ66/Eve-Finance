@@ -118,7 +118,12 @@ Deno.serve(async (req) => {
           status: "completed",
           fee_usd: fee,
           exchange_rate: marketPrice,
-          description: `Limit buy executed @ $${marketPrice.toFixed(2)} (target: $${limitPrice.toFixed(2)})`,
+          description: JSON.stringify({
+            ...orderInfo,
+            executedAt: new Date().toISOString(),
+            executedPrice: marketPrice,
+            sharesReceived,
+          }),
         });
 
         if (eveReward > 0) {
@@ -148,7 +153,12 @@ Deno.serve(async (req) => {
           fee_usd: fee,
           amount_usd: gross,
           exchange_rate: marketPrice,
-          description: `Limit sell executed @ $${marketPrice.toFixed(2)} (target: $${limitPrice.toFixed(2)})`,
+          description: JSON.stringify({
+            ...orderInfo,
+            executedAt: new Date().toISOString(),
+            executedPrice: marketPrice,
+            netUsdt,
+          }),
         });
 
         if (eveReward > 0) {
@@ -171,7 +181,7 @@ Deno.serve(async (req) => {
       executed++;
     }
 
-    return Response.json({ message: `Executed ${executed} limit order(s).`, executed });
+    return Response.json({ message: `Executed ${executed} limit order(s).`, executed, errors });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

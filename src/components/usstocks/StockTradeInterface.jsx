@@ -189,7 +189,7 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
           {["market", "limit"].map(type => (
             <button
               key={type}
-              onClick={() => { setOrderType(type); setLimitPrice(""); setBuyShares(""); setSpendAmount(""); }}
+              onClick={() => { setOrderType(type); setLimitPrice(""); setBuyShares(""); setSpendAmount(""); setSellShares(""); setResult(null); }}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-md border transition-all capitalize ${
                 orderType === type
                   ? "bg-blue-600 text-white border-blue-600"

@@ -234,6 +234,7 @@ export default function USStocks() {
             transactions={transactions}
             onRefresh={() => { refreshUser(); loadTransactions(); }}
             livePrice={livePrice}
+            allPrices={allPrices}
           />
 
           <motion.div
