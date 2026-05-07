@@ -34,8 +34,13 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
   const [result, setResult] = useState(null);
   const [isTrading, setIsTrading] = useState(false);
 
+  const [currency, setCurrency] = useState("USDT"); // "USDT" | "USD"
+
   const usdtBalance = user?.wallet_balances?.usdt || 0;
+  const usdBalance = user?.wallet_balances?.usd || 0;
   const stockBalance = user?.wallet_balances?.[selectedSymbol.toLowerCase()] || 0;
+
+  const payBalance = currency === "USDT" ? usdtBalance : usdBalance;
 
   const execPrice = orderType === "market" ? livePrice : parseFloat(limitPrice) || 0;
 
@@ -70,7 +75,7 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
   const calc = side === "buy" ? calcBuy() : calcSell();
 
   const isInsufficient = side === "buy"
-    ? (parseFloat(usdtAmount) || 0) > usdtBalance
+    ? (parseFloat(usdtAmount) || 0) > payBalance
     : (parseFloat(sharesAmount) || 0) > stockBalance;
 
   const isLimitPriceInvalid = orderType === "limit" && (parseFloat(limitPrice) || 0) <= 0;
@@ -80,7 +85,7 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
     if (isDisabled) return;
     setIsTrading(true);
     setResult(null);
-    const res = await onTrade(side, selectedSymbol, calc);
+    const res = await onTrade(side, selectedSymbol, calc, currency);
     setResult(res);
     setIsTrading(false);
     if (res.success) {
@@ -91,7 +96,7 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
   };
 
   const setPercentageBuy = (pct) => {
-    setUsdtAmount(((usdtBalance * pct / 100)).toFixed(2));
+    setUsdtAmount((payBalance * pct / 100).toFixed(2));
   };
 
   const setPercentageSell = (pct) => {
@@ -103,6 +108,7 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
     setUsdtAmount("");
     setSharesAmount("");
     setResult(null);
+    setCurrency("USDT");
   };
 
   return (
@@ -174,12 +180,31 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
           </div>
         )}
 
-        {/* BUY: input USDT amount */}
+        {/* Currency selector (buy side) */}
+        {side === "buy" && (
+          <div className="flex gap-2">
+            {["USDT", "USD"].map(c => (
+              <button
+                key={c}
+                onClick={() => { setCurrency(c); setUsdtAmount(""); }}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md border transition-all ${
+                  currency === c
+                    ? "bg-slate-800 text-white border-slate-800"
+                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-400"
+                }`}
+              >
+                Pay with {c}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* BUY: input USDT/USD amount */}
         {side === "buy" && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <Label className="text-slate-700">Amount to Spend (USDT)</Label>
-              <span className="text-slate-500">Balance: {usdtBalance.toFixed(2)} USDT</span>
+              <Label className="text-slate-700">Amount to Spend ({currency})</Label>
+              <span className="text-slate-500">Balance: {payBalance.toFixed(2)} {currency}</span>
             </div>
             <Input
               type="number"
@@ -192,11 +217,30 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
             <div className="flex gap-1.5">
               {[25, 50, 75, 100].map(pct => (
                 <Button key={pct} variant="outline" size="sm" onClick={() => setPercentageBuy(pct)}
-                  className="text-xs flex-1" disabled={usdtBalance <= 0}>
+                  className="text-xs flex-1" disabled={payBalance <= 0}>
                   {pct}%
                 </Button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Currency selector (sell side) */}
+        {side === "sell" && (
+          <div className="flex gap-2">
+            {["USDT", "USD"].map(c => (
+              <button
+                key={c}
+                onClick={() => setCurrency(c)}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md border transition-all ${
+                  currency === c
+                    ? "bg-slate-800 text-white border-slate-800"
+                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-400"
+                }`}
+              >
+                Receive {c}
+              </button>
+            ))}
           </div>
         )}
 
@@ -243,11 +287,11 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">You Spend</span>
-                  <span className="font-medium">${calc.spent.toFixed(2)} USDT</span>
+                  <span className="font-medium">${calc.spent.toFixed(2)} {currency}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Fee (0.1%)</span>
-                  <span className="text-red-500 font-medium">-${calc.fee.toFixed(4)} USDT</span>
+                  <span className="text-red-500 font-medium">-${calc.fee.toFixed(4)} {currency}</span>
                 </div>
                 <div className="flex justify-between border-t border-slate-200 pt-2">
                   <span className="font-semibold text-slate-700">You Receive</span>
@@ -266,15 +310,15 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Gross Value</span>
-                  <span className="font-medium">${calc.gross.toFixed(2)} USDT</span>
+                  <span className="font-medium">${calc.gross.toFixed(2)} {currency}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Fee (0.1%)</span>
-                  <span className="text-red-500 font-medium">-${calc.fee.toFixed(4)} USDT</span>
+                  <span className="text-red-500 font-medium">-${calc.fee.toFixed(4)} {currency}</span>
                 </div>
                 <div className="flex justify-between border-t border-slate-200 pt-2">
                   <span className="font-semibold text-slate-700">You Receive</span>
-                  <span className="font-bold text-green-600">${calc.netUsdt.toFixed(2)} USDT</span>
+                  <span className="font-bold text-green-600">${calc.netUsdt.toFixed(2)} {currency}</span>
                 </div>
               </>
             )}
@@ -285,9 +329,9 @@ export default function StockTradeInterface({ user, selectedSymbol, livePrice: l
         <AnimatePresence>
           {isInsufficient && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              Insufficient {side === "buy" ? "USDT" : selectedSymbol} balance
+            className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            Insufficient {side === "buy" ? currency : selectedSymbol} balance
             </motion.div>
           )}
           {isLimitPriceInvalid && (

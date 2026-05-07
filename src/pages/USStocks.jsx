@@ -40,23 +40,24 @@ export default function USStocks() {
    * SELL: calc = { shares, gross, fee, netUsdt, execPrice }
    *       Deduct `shares` stock, add `netUsdt` USDT
    */
-  const handleTrade = async (side, symbol, calc) => {
+  const handleTrade = async (side, symbol, calc, currency = "USDT") => {
     try {
       if (!user) return { success: false, error: "Please log in to trade." };
 
       const newBalances = { ...(user.wallet_balances || {}) };
       const stockKey = symbol.toLowerCase();
+      const currencyKey = currency.toLowerCase(); // "usdt" or "usd"
 
       if (side === "buy") {
-        const newUsdt = (newBalances.usdt || 0) - calc.spent;
-        if (newUsdt < 0) return { success: false, error: "Insufficient USDT balance." };
-        newBalances.usdt = newUsdt;
+        const newCurrBal = (newBalances[currencyKey] || 0) - calc.spent;
+        if (newCurrBal < 0) return { success: false, error: `Insufficient ${currency} balance.` };
+        newBalances[currencyKey] = newCurrBal;
         newBalances[stockKey] = (newBalances[stockKey] || 0) + calc.sharesReceived;
       } else {
         const newShares = (newBalances[stockKey] || 0) - calc.shares;
         if (newShares < 0) return { success: false, error: `Insufficient ${symbol} balance.` };
         newBalances[stockKey] = newShares;
-        newBalances.usdt = (newBalances.usdt || 0) + calc.netUsdt;
+        newBalances[currencyKey] = (newBalances[currencyKey] || 0) + calc.netUsdt;
       }
 
       // EVE reward: 100 EVE per $1 fee
@@ -70,8 +71,8 @@ export default function USStocks() {
       await Transaction.create({
         transaction_type: "swap",
         user_email: user.email,
-        from_asset: side === "buy" ? "USDT" : symbol,
-        to_asset: side === "buy" ? symbol : "USDT",
+        from_asset: side === "buy" ? currency : symbol,
+        to_asset: side === "buy" ? symbol : currency,
         amount_usd: side === "buy" ? calc.spent : calc.gross,
         fee_usd: feeUsd,
         exchange_rate: calc.execPrice,
@@ -94,7 +95,7 @@ export default function USStocks() {
 
       const received = side === "buy"
         ? `${calc.sharesReceived.toFixed(6)} ${symbol}`
-        : `$${calc.netUsdt.toFixed(2)} USDT`;
+        : `$${calc.netUsdt.toFixed(2)} ${currency}`;
 
       return { success: true, message: `${side === "buy" ? "Bought" : "Sold"} successfully! Received ${received}` };
     } catch (error) {
