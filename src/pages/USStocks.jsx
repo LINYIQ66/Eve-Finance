@@ -167,31 +167,35 @@ export default function USStocks() {
             transition={{ duration: 0.5, delay: 0.25 }}
           >
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-6 shadow-lg h-full">
-              <h3 className="text-base font-bold mb-4">How It Works</h3>
+              <h3 className="text-base font-bold mb-4">Trading Info</h3>
               <div className="space-y-3 text-blue-100 text-sm">
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p><strong className="text-white">Buy:</strong> Enter USDT amount → platform deducts fee (0.1%) → you receive shares</p>
+                  <p>Prices sourced via Binance for tokenized US stocks (BUSDT pairs)</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p><strong className="text-white">Sell:</strong> Enter share quantity → gross value calculated → fee deducted → you receive USDT</p>
+                  <p>Buy with USDT from your wallet, sell back to USDT anytime</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p><strong className="text-white">Market Order:</strong> Executes instantly at current price</p>
+                  <p>0.1% fee applies on all trades. Earn 100 EVE per $1 in fees</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p><strong className="text-white">Limit Order:</strong> Set your target price — simulated execution at that price</p>
+                  <p>Click any stock on the right to view its chart and start trading</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p>Earn <strong className="text-yellow-300">100 EVE tokens</strong> per $1 in trading fees</p>
+                  <p>Fractional trading supported — trade any amount of USDT</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
-                  <p>Fractional shares supported — trade any USDT amount</p>
+                  <p><strong className="text-white">Market Order:</strong> Executes at current price instantly</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full mt-2 flex-shrink-0" />
+                  <p><strong className="text-white">Limit Order:</strong> Set your target price for execution</p>
                 </div>
               </div>
             </div>
