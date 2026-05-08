@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Transaction, FundRequest, SystemSetting } from "@/entities/all";
+import { User, FundRequest, SystemSetting } from "@/entities/all";
 import { UploadFile } from "@/integrations/Core";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
 import { motion } from "framer-motion";
 import { getMetalPrices } from "@/functions/getMetalPrices";
 import { getStockPrices } from "@/functions/getStockPrices";
+import { getUserTransactions } from "@/functions/getUserTransactions";
 
 import BalanceCards from "../components/wallet/BalanceCards";
 import TransactionHistory from "../components/wallet/TransactionHistory";
@@ -47,19 +48,15 @@ export default function Wallet() {
     setIsLoading(true);
     try {
       const userData = await User.me();
-      const [txByUserEmail, txByCreatedBy, allFundRequests, settingsData, priceData, stockData] = await Promise.all([
-          Transaction.filter({ user_email: userData.email }, "-created_date", 500),
-          Transaction.filter({ created_by: userData.email }, "-created_date", 500),
+      const [txResult, allFundRequests, settingsData, priceData, stockData] = await Promise.all([
+          getUserTransactions({}),
           FundRequest.list("-created_date", 50),
           SystemSetting.list(),
           getMetalPrices(),
           getStockPrices({})
       ]);
 
-      // Merge both queries, deduplicate by id
-      const txMap = new Map();
-      [...txByUserEmail, ...txByCreatedBy].forEach(tx => txMap.set(tx.id, tx));
-      const userTransactions = Array.from(txMap.values()).sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+      const userTransactions = txResult?.data?.transactions || [];
 
       setUser(userData);
       setTransactions(userTransactions);
