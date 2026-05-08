@@ -47,13 +47,20 @@ export default function Wallet() {
     setIsLoading(true);
     try {
       const userData = await User.me();
-      const [userTransactions, allFundRequests, settingsData, priceData, stockData] = await Promise.all([
+      const [txByUserEmail, txByCreatedBy, allFundRequests, settingsData, priceData, stockData] = await Promise.all([
           Transaction.filter({ user_email: userData.email }, "-created_date", 500),
+          Transaction.filter({ created_by: userData.email }, "-created_date", 500),
           FundRequest.list("-created_date", 50),
+
           SystemSetting.list(),
           getMetalPrices(),
           getStockPrices({})
       ]);
+
+      // Merge both queries, deduplicate by id
+      const txMap = new Map();
+      [...txByUserEmail, ...txByCreatedBy].forEach(tx => txMap.set(tx.id, tx));
+      const userTransactions = Array.from(txMap.values()).sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
       setUser(userData);
       setTransactions(userTransactions);
