@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/entities/all";
-import { 
+import {
   Home, 
   Wallet, 
   ArrowLeftRight, 
@@ -16,7 +16,8 @@ import {
   FileText,
   Languages,
   ChevronDown,
-  BarChart2
+  BarChart2,
+  LogIn
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,6 +41,7 @@ import { LanguageProvider, useLanguage } from "@/components/common/LanguageProvi
 import ChatbotWidget from "@/components/chatbot/ChatbotWidget";
 import { canAccessPage } from "@/lib/accessControl";
 import { motion } from "framer-motion";
+import { base44 } from "@/api/base44Client";
 
 const LanguageSwitcher = () => {
     const { language, setLanguage } = useLanguage();
@@ -115,7 +117,7 @@ const LanguageSwitcher = () => {
     );
 };
 
-const SidebarMenuContent = ({ visibleNavItems, location }) => {
+const SidebarMenuContent = ({ visibleNavItems, location, showLogin, loginLabel }) => {
   const { setOpen } = useSidebar();
 
   const handleMenuClick = () => {
@@ -144,6 +146,22 @@ const SidebarMenuContent = ({ visibleNavItems, location }) => {
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}
+      {showLogin && (
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => {
+              handleMenuClick();
+              base44.auth.redirectToLogin(window.location.href);
+            }}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 rounded-xl mb-1 shadow-lg"
+          >
+            <div className="flex items-center gap-3 px-4 py-3 w-full">
+              <LogIn className="w-5 h-5" />
+              <span className="font-medium">{loginLabel}</span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      )}
     </SidebarMenu>
   );
 };
@@ -206,7 +224,7 @@ const AppLayout = ({ children }) => {
           <SidebarContent className="p-3 bg-white">
             <SidebarGroup>
               <SidebarGroupContent>
-                <SidebarMenuContent visibleNavItems={visibleNavItems} location={location} />
+                <SidebarMenuContent visibleNavItems={visibleNavItems} location={location} showLogin={!user} loginLabel={t('sidebar.login')} />
               </SidebarGroupContent>
             </SidebarGroup>
 

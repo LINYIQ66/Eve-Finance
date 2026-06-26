@@ -17,6 +17,7 @@ export const translations = {
       security: 'Security',
       security_desc: 'Your assets are protected with institutional-grade security protocols.',
       bank_grade_security: 'Bank-Grade Security',
+      login: 'Login',
     },
     login: {
       company_name: 'EVE FINANCE',
@@ -213,6 +214,7 @@ export const translations = {
       security: '安全',
       security_desc: '您的资产受到机构级安全协议的保护。',
       bank_grade_security: '银行级安全',
+      login: '登录',
     },
     login: {
       company_name: 'EVE FINANCE',
@@ -354,6 +356,7 @@ export const translations = {
       security: 'Keamanan',
       security_desc: 'Aset Anda dilindungi dengan protokol keamanan tingkat institusional.',
       bank_grade_security: 'Keamanan Tingkat Bank',
+      login: 'Masuk',
     },
     login: {
       company_name: 'EVE FINANCE',
@@ -550,6 +553,7 @@ export const translations = {
       security: 'Bảo mật',
       security_desc: 'Tài sản của bạn được bảo vệ bằng các giao thức bảo mật cấp tổ chức.',
       bank_grade_security: 'Bảo mật cấp ngân hàng',
+      login: 'Đăng nhập',
     },
     login: {
       company_name: 'EVE FINANCE',
@@ -746,6 +750,7 @@ export const translations = {
       security: 'ความปลอดภัย',
       security_desc: 'สินทรัพย์ของคุณได้รับการคุ้มครองด้วยโปรโตคอลความปลอดภัยระดับสถาบัน',
       bank_grade_security: 'ความปลอดภัยระดับธนาคาร',
+      login: 'เข้าสู่ระบบ',
     },
     login: {
       company_name: 'EVE FINANCE',
