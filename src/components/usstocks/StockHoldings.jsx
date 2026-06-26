@@ -20,6 +20,8 @@ const DISPLAY_NAMES = {
   coin: "Coinbase", baba: "Alibaba", openai: "OpenAI", crwv: "CoreWeave"
 };
 
+const CURRENCIES = new Set(["usdt", "usd", "eve"]);
+
 // Calculate average cost basis per symbol from completed buy transactions
 function calcCostBasis(transactions = []) {
   const basis = {}; // { [symbolLower]: { totalShares, totalCost } }
@@ -32,8 +34,9 @@ function calcCostBasis(transactions = []) {
     if (!tx.from_asset || !tx.to_asset) continue;
     const toKey = tx.to_asset.toLowerCase();
     const fromKey = tx.from_asset.toLowerCase();
-    const isBuy = US_STOCK_SYMBOLS.includes(toKey);
-    const isSell = US_STOCK_SYMBOLS.includes(fromKey);
+    // Identify stock transactions by checking currency vs non-currency assets
+    const isBuy = !CURRENCIES.has(toKey) && CURRENCIES.has(fromKey);
+    const isSell = !CURRENCIES.has(fromKey) && CURRENCIES.has(toKey);
 
     if (isBuy) {
       // buying stock: amount_usd = gross spent, net shares = gross*(1-fee)/price
@@ -66,10 +69,20 @@ export default function StockHoldings({ user, prices, onSymbolClick, transaction
 
   const costBasis = useMemo(() => calcCostBasis(transactions), [transactions]);
 
-  const holdings = US_STOCK_SYMBOLS
-    .filter(key => (balances[key] || 0) > 0)
+  // Dynamically build stock keys from balances — includes custom-added stocks
+  const stockKeys = [...new Set([
+    ...Object.keys(balances).filter(k =>
+      !CURRENCIES.has(k) && !k.startsWith("frozen_") && (balances[k] || 0) > 0
+    ),
+    ...Object.keys(balances)
+      .filter(k => k.startsWith("frozen_") && (balances[k] || 0) > 0)
+      .map(k => k.replace("frozen_", "")),
+  ])];
+
+  const holdings = stockKeys
     .map(key => {
-      const shares = balances[key];
+      const shares = balances[key] || 0;
+      const frozenShares = balances[`frozen_${key}`] || 0;
       const symbol = key.toUpperCase();
       const price = prices?.[symbol]?.price || null;
       const change24h = prices?.[symbol]?.change || 0;
@@ -82,10 +95,10 @@ export default function StockHoldings({ user, prices, onSymbolClick, transaction
       const pnlPct = (unrealizedPnl !== null && totalCost > 0) ? (unrealizedPnl / totalCost) * 100 : null;
 
       return {
-        key, symbol, shares, price, change24h,
+        key, symbol, shares, frozenShares, price, change24h,
         marketValue, avgCost, totalCost,
         unrealizedPnl, pnlPct,
-        name: DISPLAY_NAMES[key]
+        name: DISPLAY_NAMES[key] || symbol
       };
     });
 
@@ -179,7 +192,12 @@ export default function StockHoldings({ user, prices, onSymbolClick, transaction
                   )}
                 </div>
                 <p className="text-xs text-slate-500 truncate">{h.name}</p>
-                <p className="text-xs text-slate-600 mt-1">{h.shares.toFixed(6)} 股</p>
+                <div className="text-xs text-slate-600 mt-1">
+                  <span>{h.shares.toFixed(6)} 股</span>
+                  {h.frozenShares > 0 && (
+                    <span className="text-yellow-600 ml-1">({h.frozenShares.toFixed(6)} 冻结)</span>
+                  )}
+                </div>
                 {h.marketValue !== null && (
                   <p className="text-sm font-semibold text-blue-700 mt-0.5">${h.marketValue.toFixed(2)}</p>
                 )}
@@ -196,7 +214,7 @@ export default function StockHoldings({ user, prices, onSymbolClick, transaction
               <thead>
                 <tr className="text-slate-400 border-b border-slate-100">
                   <th className="text-left py-2 px-2 font-medium">股票</th>
-                  <th className="text-right py-2 px-2 font-medium">持股数</th>
+                  <th className="text-right py-2 px-2 font-medium">持股总数</th>
                   <th className="text-right py-2 px-2 font-medium">均价成本</th>
                   <th className="text-right py-2 px-2 font-medium">市价</th>
                   <th className="text-right py-2 px-2 font-medium">市值</th>
@@ -219,6 +237,9 @@ export default function StockHoldings({ user, prices, onSymbolClick, transaction
                     </td>
                     <td className="py-2.5 px-2 text-right text-slate-700 font-medium">
                       {h.shares.toFixed(6)}
+                      {h.frozenShares > 0 && (
+                        <div className="text-xs text-yellow-600 font-normal">{h.frozenShares.toFixed(6)} 待成交</div>
+                      )}
                     </td>
                     <td className="py-2.5 px-2 text-right text-slate-600">
                       {h.avgCost ? `$${h.avgCost.toFixed(2)}` : <span className="text-slate-300">—</span>}

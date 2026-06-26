@@ -13,11 +13,6 @@ import { Transaction, User } from "@/entities/all";
 
 const FEE_RATE = 0.001;
 
-const US_STOCKS = new Set([
-  "aapl","msft","nvda","amzn","googl","meta","tsla","amd","intc","sndk",
-  "mu","mstr","pltr","hood","nflx","orcl","coin","baba","openai","crwv"
-]);
-
 export default function USStockPendingOrders({ transactions = [], onRefresh, livePrice, allPrices = {} }) {
   const [cancellingId, setCancellingId] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -26,12 +21,12 @@ export default function USStockPendingOrders({ transactions = [], onRefresh, liv
   const [savingId, setSavingId] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
 
+  // Identify stock limit orders by metadata — works for default AND custom-added stocks
   const pendingOrders = transactions.filter(t => {
     if (t.status !== "pending" || t.transaction_type !== "swap") return false;
     let meta = {};
     try { meta = JSON.parse(t.description || "{}"); } catch {}
-    const sym = (meta.symbol || t.to_asset || t.from_asset || "").toLowerCase();
-    return US_STOCKS.has(sym);
+    return meta.symbol && meta.side && meta.limitPrice;
   });
 
   const handleCancel = async (order) => {

@@ -50,6 +50,38 @@ async function fetchPrices() {
   return prices;
 }
 
+// Fetch prices for custom (non-default) stock symbols via Alpaca
+async function fetchAlpacaPrices(symbols) {
+  const apiKey = Deno.env.get("ALPACA_API_KEY");
+  const secretKey = Deno.env.get("ALPACA_SECRET_KEY");
+  const symStr = symbols.join(",");
+  const prices = {};
+
+  try {
+    const tradeRes = await fetch(
+      `https://data.alpaca.markets/v2/stocks/trades/latest?symbols=${encodeURIComponent(symStr)}`,
+      {
+        headers: {
+          'APCA-API-KEY-ID': apiKey,
+          'APCA-API-SECRET-KEY': secretKey,
+        }
+      }
+    );
+
+    if (!tradeRes.ok) return prices;
+
+    const tradeData = await tradeRes.json();
+    for (const [symbol, trade] of Object.entries(tradeData.trades || {})) {
+      const price = trade.p || 0;
+      if (price > 0) prices[symbol] = price;
+    }
+  } catch (e) {
+    // Best effort — custom symbols without prices will be skipped
+  }
+
+  return prices;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -64,8 +96,23 @@ Deno.serve(async (req) => {
       return Response.json({ message: "No pending limit orders.", executed: 0 });
     }
 
-    // Fetch current market prices
+    // Fetch current market prices for default stocks
     const prices = await fetchPrices();
+
+    // Fetch Alpaca prices for any custom (non-default) stock symbols in pending orders
+    const defaultSymbols = new Set(STOCKS.map(s => s.symbol));
+    const customSymbols = new Set();
+    for (const tx of pendingTxs) {
+      let orderInfo;
+      try { orderInfo = JSON.parse(tx.description || "{}"); } catch { continue; }
+      if (orderInfo.symbol && !defaultSymbols.has(orderInfo.symbol)) {
+        customSymbols.add(orderInfo.symbol);
+      }
+    }
+    if (customSymbols.size > 0) {
+      const alpacaPrices = await fetchAlpacaPrices([...customSymbols]);
+      Object.assign(prices, alpacaPrices);
+    }
 
     let executed = 0;
     let errors = [];
