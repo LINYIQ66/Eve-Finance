@@ -17,9 +17,9 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("ALPACA_API_KEY");
     const secretKey = Deno.env.get("ALPACA_SECRET_KEY");
 
-    // Get latest quotes (bid/ask)
-    const quoteRes = await fetch(
-      `https://data.alpaca.markets/v2/stocks/quotes/latest?symbols=${encodeURIComponent(symbols)}`,
+    // Get latest trades (last traded price — more accurate than bid/ask mid)
+    const tradeRes = await fetch(
+      `https://data.alpaca.markets/v2/stocks/trades/latest?symbols=${encodeURIComponent(symbols)}`,
       {
         headers: {
           'APCA-API-KEY-ID': apiKey,
@@ -28,18 +28,16 @@ Deno.serve(async (req) => {
       }
     );
 
-    if (!quoteRes.ok) {
-      const errText = await quoteRes.text();
-      return Response.json({ error: `Alpaca quotes error: ${quoteRes.status} ${errText}` }, { status: 502 });
+    if (!tradeRes.ok) {
+      const errText = await tradeRes.text();
+      return Response.json({ error: `Alpaca trades error: ${tradeRes.status} ${errText}` }, { status: 502 });
     }
 
-    const quoteData = await quoteRes.json();
+    const tradeData = await tradeRes.json();
     const prices = {};
 
-    for (const [symbol, quote] of Object.entries(quoteData.quotes || {})) {
-      const bid = quote.bp || 0;
-      const ask = quote.ap || 0;
-      const price = (bid + ask) / 2 || bid || ask;
+    for (const [symbol, trade] of Object.entries(tradeData.trades || {})) {
+      const price = trade.p || 0;
       if (price > 0) {
         prices[symbol] = {
           price,
@@ -65,19 +63,15 @@ Deno.serve(async (req) => {
         const snapData = await snapRes.json();
         for (const [symbol, snap] of Object.entries(snapData.snapshots || {})) {
           if (prices[symbol] && snap.daily_bar) {
-            const current = snap.daily_bar.c;
             const prevClose = snap.prev_daily_bar?.c || snap.daily_bar.o;
-            if (current > 0) {
-              prices[symbol].price = current;
-              if (prevClose > 0) {
-                prices[symbol].change = ((current - prevClose) / prevClose) * 100;
-              }
+            if (prevClose > 0) {
+              prices[symbol].change = ((prices[symbol].price - prevClose) / prevClose) * 100;
             }
           }
         }
       }
     } catch (e) {
-      // Snapshots not available, prices from quotes are sufficient
+      // Snapshots not available, prices from trades are sufficient
     }
 
     return Response.json({ prices, timestamp: Date.now() });
