@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/entities/all";
+import { eve } from "@/api/eveClient";
 import {
   Home, 
   Wallet, 
@@ -42,7 +43,6 @@ import { LanguageProvider, useLanguage } from "@/components/common/LanguageProvi
 import ChatbotWidget from "@/components/chatbot/ChatbotWidget";
 import { canAccessPage } from "@/lib/accessControl";
 import { motion } from "framer-motion";
-import { base44 } from "@/api/base44Client";
 
 const LanguageSwitcher = () => {
     const { language, setLanguage } = useLanguage();
@@ -152,7 +152,7 @@ const SidebarMenuContent = ({ visibleNavItems, location, showLogin, loginLabel }
           <SidebarMenuButton
             onClick={() => {
               handleMenuClick();
-              base44.auth.redirectToLogin(window.location.href);
+              eve.auth.redirectToLogin(window.location.href);
             }}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 rounded-xl mb-1 shadow-lg"
           >

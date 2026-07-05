@@ -61,6 +61,7 @@ import DailyStatement from './pages/DailyStatement';
 import HKStocks from './pages/HKStocks';
 import USStocks from './pages/USStocks';
 import ApiDocs from './pages/ApiDocs';
+import Login from './pages/Login';
 import __Layout from './Layout.jsx';
 
 
@@ -79,6 +80,7 @@ export const PAGES = {
     "HKStocks": HKStocks,
     "USStocks": USStocks,
     "ApiDocs": ApiDocs,
+    "Login": Login,
 }
 
 export const pagesConfig = {
