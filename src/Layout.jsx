@@ -191,6 +191,7 @@ const AppLayout = ({ children }) => {
     { title: t('sidebar.physical'), url: createPageUrl("Physical"), icon: Package, page: 'Physical' },
     { title: t('sidebar.loan'), url: createPageUrl("Lending"), icon: Banknote, page: 'Lending' },
     { title: t('sidebar.us_stocks'), url: createPageUrl("USStocks"), icon: BarChart2, page: 'USStocks' },
+    { title: t('sidebar.hk_stocks'), url: createPageUrl("HKStocks"), icon: BarChart2, page: 'HKStocks' },
     { title: t('sidebar.staking'), url: createPageUrl("Staking"), icon: PiggyBank, page: 'Staking' },
     { title: t('sidebar.account'), url: createPageUrl("Account"), icon: UserCheck, page: 'Account' },
     { title: t('sidebar.statement'), url: createPageUrl("DailyStatement"), icon: FileText, page: 'DailyStatement' },

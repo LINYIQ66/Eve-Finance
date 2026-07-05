@@ -35,13 +35,13 @@ export const ROLE_LABELS = {
 // Which pages each role can see in navigation
 const ROLE_PAGE_ACCESS = {
   admin: ['*'], // All pages
-  eve_sales: ['Home', 'Wallet', 'Trading', 'USStocks', 'Physical', 'Account', 'Guide'],
+  eve_sales: ['Home', 'Wallet', 'Trading', 'USStocks', 'HKStocks', 'Physical', 'Account', 'Guide'],
   eve_finance: ['Home', 'Wallet', 'Lending', 'DailyStatement', 'Account', 'Guide'],
-  customer_admin: ['Home', 'Wallet', 'Trading', 'USStocks', 'Physical', 'Lending', 'Staking', 'Account', 'DailyStatement', 'Guide'],
-  customer_buyer: ['Home', 'Wallet', 'Trading', 'USStocks', 'Physical', 'Lending', 'Staking', 'Account', 'DailyStatement', 'Guide'],
+  customer_admin: ['Home', 'Wallet', 'Trading', 'USStocks', 'HKStocks', 'Physical', 'Lending', 'Staking', 'Account', 'DailyStatement', 'Guide'],
+  customer_buyer: ['Home', 'Wallet', 'Trading', 'USStocks', 'HKStocks', 'Physical', 'Lending', 'Staking', 'Account', 'DailyStatement', 'Guide'],
   customer_viewer: ['Home', 'Wallet', 'Account', 'Guide'],
-  dealer: ['Home', 'Wallet', 'Trading', 'USStocks', 'Physical', 'Account', 'Guide'],
-  user: ['Home', 'Wallet', 'Trading', 'USStocks', 'Physical', 'Lending', 'Staking', 'Account', 'DailyStatement', 'Guide', 'ApiDocs'], // Legacy
+  dealer: ['Home', 'Wallet', 'Trading', 'USStocks', 'HKStocks', 'Physical', 'Account', 'Guide'],
+  user: ['Home', 'Wallet', 'Trading', 'USStocks', 'HKStocks', 'Physical', 'Lending', 'Staking', 'Account', 'DailyStatement', 'Guide', 'ApiDocs'], // Legacy
 };
 
 export const PUBLIC_PAGES = ['Home', 'Guide', 'ApiDocs'];

@@ -55,7 +55,22 @@
           }
         }
       },
-      "description": "User's custom stock watchlist (added via Alpaca search)"
+      "description": "User's custom stock watchlist (added via search)"
+    },
+    "hk_stock_watchlist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "User's custom HK stock watchlist"
     },
     "date_of_birth": {
       "type": "string",
