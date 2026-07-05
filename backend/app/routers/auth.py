@@ -60,7 +60,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account banned",
         )
-    user.last_login_at = datetime.now(timezone.utc)
+    user.last_login_at = datetime.utcnow()
     await db.commit()
 
     token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
