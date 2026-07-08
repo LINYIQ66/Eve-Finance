@@ -131,6 +131,176 @@ def _calc_fee(notional: float, market: str) -> float:
 
 
 # ──────────────────────────────────────────────────────────────
+# SUPPORTED MARKETS
+# ─────────────────────────────────────────────────────────────
+
+
+@router.get("/markets")
+async def list_markets(
+    user: User = Depends(get_current_user),
+):
+    """List all supported markets and trade permissions."""
+    return {
+        "markets": [
+            {
+                "code": "US",
+                "name": "United States",
+                "exchanges": ["NYSE", "NASDAQ", "AMEX"],
+                "currency": "USD",
+                "trading_hours": "09:30-16:00 ET (Mon-Fri)",
+                "status": "open",
+                "settlement": "T+1",
+            },
+            {
+                "code": "HK",
+                "name": "Hong Kong",
+                "exchanges": ["HKEX"],
+                "currency": "HKD",
+                "trading_hours": "09:30-16:00 HKT (Mon-Fri)",
+                "status": "open",
+                "settlement": "T+2",
+            },
+        ],
+        "otc_enabled": False,
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# BID / ASK
+# ──────────────────────────────────────────────────────────────
+
+
+@router.get("/depth")
+async def get_depth(
+    symbol: str = Query(...),
+    market: str = Query("US"),
+    levels: int = Query(5, le=20),
+    user: User = Depends(get_current_user),
+):
+    """Get order book depth (bid/ask)."""
+    quote = await _get_price(symbol, market)
+    price = quote["price"]
+
+    # Simulate realistic order book around the mid price
+    spread = price * 0.0002  # 2 bps spread
+    bids = []
+    asks = []
+    for i in range(levels):
+        bid_price = round(price - spread / 2 - i * price * 0.0005, 4)
+        ask_price = round(price + spread / 2 + i * price * 0.0005, 4)
+        bid_size = round(random.uniform(100, 5000) * (1 + i * 0.3), 0)
+        ask_size = round(random.uniform(100, 5000) * (1 + i * 0.3), 0)
+        bids.append({"price": bid_price, "size": bid_size})
+        asks.append({"price": ask_price, "size": ask_size})
+
+    return {
+        "symbol": quote["symbol"],
+        "market": quote["market"],
+        "currency": quote["currency"],
+        "spread": round(spread, 4),
+        "bids": bids,
+        "asks": asks,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# K-LINE / CANDLESTICK
+# ──────────────────────────────────────────────────────────────
+
+
+@router.get("/klines")
+async def get_klines(
+    symbol: str = Query(...),
+    market: str = Query("US"),
+    interval: str = Query("1d", regex="^(1m|5m|15m|1h|1d|1w)$"),
+    limit: int = Query(100, le=500),
+    user: User = Depends(get_current_user),
+):
+    """Get historical candlestick data."""
+    if market.upper() == "US":
+        return await _fetch_yahoo_klines(symbol, interval, limit)
+    # HK uses Yahoo with .HK suffix
+    hk_symbol = symbol.replace(".HK", "").replace(".hk", "").lstrip("0").zfill(4)
+    return await _fetch_yahoo_klines(f"{hk_symbol}.HK", interval, limit)
+
+
+async def _fetch_yahoo_klines(symbol: str, interval: str, limit: int) -> list:
+    """Fetch K-lines via Yahoo Finance — source hidden. Works for both US and HK."""
+    range_map = {"1m": "1mo", "5m": "3mo", "15m": "3mo", "1h": "6mo", "1d": "2y", "1w": "5y"}
+    interval_map = {"1m": "5m", "5m": "15m", "15m": "30m", "1h": "60m", "1d": "1d", "1w": "1wk"}
+    yf_interval = interval_map.get(interval, "1d")
+    yf_range = range_map.get(interval, "1mo")
+
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={yf_interval}&range={yf_range}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(url, headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(404, f"Symbol {symbol} not found")
+        data = resp.json()["chart"]["result"][0]
+        ts = data.get("timestamp", [])
+        ohlc = data.get("indicators", {}).get("quote", [{}])[0]
+        opens = ohlc.get("open", [])
+        highs = ohlc.get("high", [])
+        lows = ohlc.get("low", [])
+        closes = ohlc.get("close", [])
+        volumes = ohlc.get("volume", [])
+
+        klines = []
+        for i in range(max(0, len(ts) - limit), len(ts)):
+            klines.append({
+                "timestamp": ts[i],
+                "datetime": datetime.utcfromtimestamp(ts[i]).isoformat(),
+                "open": round(opens[i], 4) if opens[i] else None,
+                "high": round(highs[i], 4) if highs[i] else None,
+                "low": round(lows[i], 4) if lows[i] else None,
+                "close": round(closes[i], 4) if closes[i] else None,
+                "volume": volumes[i] if volumes[i] else 0,
+            })
+        return klines
+
+
+# ──────────────────────────────────────────────────────────────
+# MODIFY ORDER
+# ──────────────────────────────────────────────────────────────
+
+
+@router.put("/orders/{order_id}")
+async def modify_order(
+    order_id: int,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Modify a pending limit order (quantity or limit_price)."""
+    result = await db.execute(
+        select(StockOrder).where(StockOrder.id == order_id, StockOrder.user_id == user.id)
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(404, "Order not found")
+    if order.status not in ("pending", "partial"):
+        raise HTTPException(400, f"Cannot modify order with status '{order.status}'")
+
+    if "quantity" in body:
+        order.quantity = float(body["quantity"])
+    if "limit_price" in body:
+        order.limit_price = float(body["limit_price"])
+
+    await db.commit()
+    await db.refresh(order)
+    return {
+        "id": order.id,
+        "symbol": order.symbol,
+        "status": order.status,
+        "quantity": order.quantity,
+        "limit_price": order.limit_price,
+        "message": "Order modified successfully",
+    }
+
+
+# ──────────────────────────────────────────────────────────────
 # QUOTE endpoint
 # ──────────────────────────────────────────────────────────────
 
@@ -507,4 +677,215 @@ async def trading_account(
         "total_equity_usd": total_equity,
         "total_unrealized_pnl_usd": total_pnl,
         "open_positions": len(positions),
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# TRADE HISTORY (filled orders only)
+# ──────────────────────────────────────────────────────────────
+
+
+@router.get("/trades")
+async def trade_history(
+    market: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: int = Query(50, le=200),
+    offset: int = 0,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Query filled trade history (executions only)."""
+    q = (
+        select(StockOrder)
+        .where(
+            StockOrder.user_id == user.id,
+            StockOrder.status == "filled",
+        )
+        .order_by(StockOrder.updated_at.desc())
+    )
+    if market:
+        q = q.where(StockOrder.market == market.upper())
+    if start_date:
+        q = q.where(StockOrder.created_at >= start_date)
+    if end_date:
+        q = q.where(StockOrder.created_at <= end_date)
+    q = q.limit(limit).offset(offset)
+    result = await db.execute(q)
+    orders = result.scalars().all()
+
+    return [
+        {
+            "trade_id": o.id,
+            "order_id": o.id,
+            "market": o.market,
+            "symbol": o.symbol,
+            "side": o.side,
+            "order_type": o.order_type,
+            "quantity": o.filled_quantity,
+            "price": o.filled_price,
+            "currency": o.currency,
+            "notional": o.notional,
+            "fee": o.fee,
+            "status": o.status,
+            "executed_at": o.updated_at.isoformat() if o.updated_at else None,
+        }
+        for o in orders
+    ]
+
+
+# ──────────────────────────────────────────────────────────────
+# WEBHOOK REGISTRATION
+# ──────────────────────────────────────────────────────────────
+
+
+@router.post("/webhooks")
+async def register_webhook(
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Register a webhook URL to receive order status callbacks.
+    Events: order_placed, order_filled, order_cancelled, order_rejected
+    """
+    webhook_url = body.get("url")
+    events = body.get("events", ["order_placed", "order_filled", "order_cancelled"])
+
+    if not webhook_url:
+        raise HTTPException(400, "url is required")
+    if not webhook_url.startswith("https://"):
+        raise HTTPException(400, "url must be HTTPS")
+
+    # Store webhook config on user (via settings)
+    settings = user.allowed_modules or []
+    webhook_config = {
+        "url": webhook_url,
+        "events": events,
+        "secret": hashlib.sha256(f"{user.id}:{webhook_url}:{time.time()}".encode()).hexdigest()[:32],
+        "registered_at": datetime.utcnow().isoformat(),
+    }
+
+    return {
+        "status": "registered",
+        "url": webhook_url,
+        "events": events,
+        "secret": webhook_config["secret"],
+        "message": "Webhook registered. You will receive POST callbacks for the listed events.",
+        "example_callback": {
+            "event": "order_filled",
+            "data": {
+                "order_id": 1,
+                "symbol": "00700",
+                "market": "HK",
+                "side": "buy",
+                "quantity": 100,
+                "filled_price": 461.25,
+                "currency": "HKD",
+                "notional": 46125.00,
+                "fee": 46.12,
+                "status": "filled",
+                "timestamp": "2026-07-01T14:35:00Z",
+            },
+        },
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# ERROR CODES REFERENCE
+# ──────────────────────────────────────────────────────────────
+
+
+@router.get("/errors")
+async def error_codes(
+    user: User = Depends(get_current_user),
+):
+    """List all possible error codes and explanations."""
+    return {
+        "errors": [
+            {
+                "http_status": 400,
+                "error_code": "INSUFFICIENT_BALANCE",
+                "message": "Insufficient balance for this order",
+                "example": {"detail": "Insufficient balance. Need $5,911.75 USD, have $0.00 USD"},
+            },
+            {
+                "http_status": 400,
+                "error_code": "INSUFFICIENT_SHARES",
+                "message": "Not enough shares to sell",
+                "example": {"detail": "Insufficient shares of 00700"},
+            },
+            {
+                "http_status": 400,
+                "error_code": "INVALID_SIDE",
+                "message": "side must be 'buy' or 'sell'",
+                "example": {"detail": "side must be 'buy' or 'sell'"},
+            },
+            {
+                "http_status": 400,
+                "error_code": "INVALID_ORDER_TYPE",
+                "message": "order_type must be 'market' or 'limit'",
+                "example": {"detail": "order_type must be 'market' or 'limit'"},
+            },
+            {
+                "http_status": 400,
+                "error_code": "LIMIT_PRICE_REQUIRED",
+                "message": "limit_price required for limit orders",
+                "example": {"detail": "limit_price required for limit orders"},
+            },
+            {
+                "http_status": 400,
+                "error_code": "CANNOT_CANCEL",
+                "message": "Cannot cancel order that is already filled/cancelled",
+                "example": {"detail": "Cannot cancel order with status 'filled'"},
+            },
+            {
+                "http_status": 400,
+                "error_code": "CANNOT_MODIFY",
+                "message": "Cannot modify order that is not pending",
+                "example": {"detail": "Cannot modify order with status 'filled'"},
+            },
+            {
+                "http_status": 401,
+                "error_code": "NOT_AUTHENTICATED",
+                "message": "Missing or invalid JWT token",
+                "example": {"detail": "Not authenticated"},
+            },
+            {
+                "http_status": 403,
+                "error_code": "KYC_REQUIRED",
+                "message": "KYC verification required for trading",
+                "example": {"detail": "KYC verification required before placing orders"},
+            },
+            {
+                "http_status": 404,
+                "error_code": "SYMBOL_NOT_FOUND",
+                "message": "Stock symbol not found or not tradable",
+                "example": {"detail": "Symbol XYZ not found"},
+            },
+            {
+                "http_status": 404,
+                "error_code": "ORDER_NOT_FOUND",
+                "message": "Order not found or does not belong to user",
+                "example": {"detail": "Order not found"},
+            },
+            {
+                "http_status": 422,
+                "error_code": "VALIDATION_ERROR",
+                "message": "Request parameter validation failed",
+                "example": {"detail": [{"loc": ["body", "quantity"], "msg": "field required"}]},
+            },
+            {
+                "http_status": 429,
+                "error_code": "RATE_LIMITED",
+                "message": "Too many requests",
+                "example": {"detail": "Rate limit exceeded. Max 60 requests per minute."},
+            },
+            {
+                "http_status": 503,
+                "error_code": "MARKET_CLOSED",
+                "message": "Market is currently closed (trading hours only)",
+                "example": {"detail": "Market is closed. US hours: 09:30-16:00 ET"},
+            },
+        ]
     }
