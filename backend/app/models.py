@@ -60,6 +60,8 @@ class User(Base):
     stakes = relationship("Stake", back_populates="user", cascade="all, delete-orphan")
     redemptions = relationship("PhysicalRedemption", back_populates="user", cascade="all, delete-orphan")
     support_tickets = relationship("SupportTicket", back_populates="user", cascade="all, delete-orphan")
+    stock_orders = relationship("StockOrder", back_populates="user", cascade="all, delete-orphan")
+    stock_positions = relationship("StockPosition", back_populates="user", cascade="all, delete-orphan")
 
 
 class Transaction(Base):
@@ -199,6 +201,48 @@ class AuditLog(Base):
     target_user_email = Column(String(255), nullable=True)
     details = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StockOrder(Base):
+    """Stock trading orders — supports US and HK markets."""
+    __tablename__ = "stock_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    market = Column(String(10), nullable=False)        # US / HK
+    symbol = Column(String(20), nullable=False, index=True)
+    side = Column(String(10), nullable=False)           # buy / sell
+    order_type = Column(String(20), default="market")   # market / limit
+    quantity = Column(Float, nullable=False)
+    filled_quantity = Column(Float, default=0)
+    limit_price = Column(Float, nullable=True)
+    filled_price = Column(Float, nullable=True)
+    currency = Column(String(10), default="USD")        # USD / HKD
+    notional = Column(Float, nullable=True)             # total value at fill
+    fee = Column(Float, default=0)
+    status = Column(String(20), default="pending")      # pending / filled / partial / cancelled / rejected
+    source = Column(String(50), nullable=True)          # hidden — internal only
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="stock_orders")
+
+
+class StockPosition(Base):
+    """Current stock holdings per user — US and HK."""
+    __tablename__ = "stock_positions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    market = Column(String(10), nullable=False)        # US / HK
+    symbol = Column(String(20), nullable=False)
+    quantity = Column(Float, default=0)
+    avg_cost = Column(Float, default=0)
+    currency = Column(String(10), default="USD")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="stock_positions")
 
 
 class SystemSetting(Base):

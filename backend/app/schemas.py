@@ -230,3 +230,72 @@ class SupportTicketOut(BaseModel):
 # Forward refs
 # ---------------------------------------------------------------------------
 TokenResponse.model_rebuild()
+
+
+# ---------------------------------------------------------------------------
+# Stock Trading — US & HK
+# ---------------------------------------------------------------------------
+class StockQuoteRequest(BaseModel):
+    symbol: str
+    market: str = "US"  # US / HK
+
+
+class StockQuote(BaseModel):
+    symbol: str
+    market: str
+    price: float
+    change: Optional[float] = None
+    change_percent: Optional[float] = None
+    currency: str
+    name: Optional[str] = None
+    high: Optional[float] = None
+    low: Optional[float] = None
+    open: Optional[float] = None
+    prev_close: Optional[float] = None
+    volume: Optional[int] = None
+    timestamp: Optional[str] = None
+
+
+class StockOrderRequest(BaseModel):
+    symbol: str
+    market: str = "US"  # US / HK
+    side: str  # buy / sell
+    quantity: float = Field(gt=0)
+    order_type: str = "market"  # market / limit
+    limit_price: Optional[float] = None
+
+
+class StockOrderOut(BaseModel):
+    id: int
+    market: str
+    symbol: str
+    side: str
+    order_type: str
+    quantity: float
+    filled_quantity: float
+    limit_price: Optional[float] = None
+    filled_price: Optional[float] = None
+    currency: str
+    notional: Optional[float] = None
+    fee: float
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StockPositionOut(BaseModel):
+    id: int
+    market: str
+    symbol: str
+    quantity: float
+    avg_cost: float
+    currency: str
+    current_price: Optional[float] = None
+    market_value: Optional[float] = None
+    unrealized_pnl: Optional[float] = None
+    unrealized_pnl_percent: Optional[float] = None
+
+    model_config = {"from_attributes": True}
+
