@@ -110,6 +110,20 @@ def resolve_account(account_id: str, auth: dict, db: Session) -> V3Account:
     return acct
 
 
+
+
+def append_status(order, status: str, reason: str = None):
+    """Append to order.status_history with proper SQLAlchemy JSON dirty marking."""
+    from sqlalchemy.orm.attributes import flag_modified
+    entry = {"status": status, "at": utcnow_str()}
+    if reason:
+        entry["reason"] = reason
+    if order.status_history is None:
+        order.status_history = []
+    order.status_history.append(entry)
+    flag_modified(order, "status_history")
+
+
 def utcnow_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
@@ -855,7 +869,73 @@ def submit_order(
                 quotes = r.json().get("quotes", [])
                 if quotes:
                     price = Decimal(str(quotes[0].get("price", 0)))
-                    # Fill
+
+                    # ── Price validation for limit/stop orders ──
+                    limit_price = Decimal(body.limit_price) if body.limit_price else None
+                    stop_price = Decimal(body.stop_price) if body.stop_price else None
+
+                    if body.order_type in ("limit", "limit_post_only") and limit_price is not None:
+                        if body.side == "buy" and limit_price < price:
+                            # Buy limit below market — should not fill
+                            order.status = "accepted"
+                            order.limit_price = body.limit_price
+                            append_status(order, "pending", f"limit_price {limit_price} < market {price}")
+                            db.commit()
+                            db.refresh(order)
+                            resp = eve_success(OrderOut(
+                                id=order.id, client_order_id=order.client_order_id,
+                                symbol=order.symbol, side=order.side, order_type=order.order_type,
+                                qty=order.qty, filled_qty="0", remaining_qty=order.qty,
+                                limit_price=order.limit_price, stop_price=order.stop_price,
+                                time_in_force=order.time_in_force,
+                                status="accepted",
+                                status_history=[OrderStatusHistory(status=s["status"], at=s["at"], reason=s.get("reason")) for s in (order.status_history or [])],
+                                commission="0", reserved_cash=str(total_cost) if 'total_cost' in dir() else None,
+                                reject_reason=None,
+                                created_at=order.created_at.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+                                updated_at=order.updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+                            ))
+                            if x_idempotency_key:
+                                store_idempotency(x_idempotency_key, "POST /v3/orders", compute_hash(body.dict()), resp, 200, db)
+                            return resp
+                        elif body.side == "sell" and limit_price > price:
+                            # Sell limit above market — should not fill
+                            order.status = "accepted"
+                            order.limit_price = body.limit_price
+                            append_status(order, "pending", f"limit_price {limit_price} > market {price}")
+                            db.commit()
+                            db.refresh(order)
+                            resp = eve_success(OrderOut(
+                                id=order.id, client_order_id=order.client_order_id,
+                                symbol=order.symbol, side=order.side, order_type=order.order_type,
+                                qty=order.qty, filled_qty="0", remaining_qty=order.qty,
+                                limit_price=order.limit_price, stop_price=order.stop_price,
+                                time_in_force=order.time_in_force,
+                                status="accepted",
+                                status_history=[OrderStatusHistory(status=s["status"], at=s["at"], reason=s.get("reason")) for s in (order.status_history or [])],
+                                commission="0", reserved_cash=None,
+                                reject_reason=None,
+                                created_at=order.created_at.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+                                updated_at=order.updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+                            ))
+                            if x_idempotency_key:
+                                store_idempotency(x_idempotency_key, "POST /v3/orders", compute_hash(body.dict()), resp, 200, db)
+                            return resp
+
+                    # Stop orders — only fill when market crosses stop
+                    if body.order_type == "stop" and stop_price is not None:
+                        if body.side == "buy" and price <= stop_price:
+                            order.status = "accepted"
+                            append_status(order, "pending", f"stop not triggered (market {price} >= stop {stop_price})")
+                            db.commit()
+                            return eve_success(OrderOut(...))
+                        elif body.side == "sell" and price >= stop_price:
+                            order.status = "accepted"
+                            append_status(order, "pending", f"stop not triggered (market {price} <= stop {stop_price})")
+                            db.commit()
+                            return eve_success(OrderOut(...))
+
+                    # Market order or limit order at/above market — fill normally
                     notional = qty * price
                     commission = notional * Decimal("0.002")
                     stamp_duty = notional * Decimal("0.0013")
@@ -1000,7 +1080,7 @@ def submit_order(
         stop_price=order.stop_price,
         time_in_force=order.time_in_force,
         status=order.status,
-        status_history=[OrderStatusHistory(status=s["status"], at=s["at"]) for s in (order.status_history or [])],
+        status_history=[OrderStatusHistory(status=s["status"], at=s["at"], reason=s.get("reason")) for s in (order.status_history or [])],
         commission=order.commission,
         reserved_cash=order.reserved_cash,
         reject_reason=order.reject_reason,
@@ -1043,7 +1123,7 @@ def list_orders(
             limit_price=o.limit_price, stop_price=o.stop_price,
             time_in_force=o.time_in_force,
             status=o.status,
-            status_history=[OrderStatusHistory(status=s["status"], at=s["at"]) for s in (o.status_history or [])],
+            status_history=[OrderStatusHistory(status=s["status"], at=s["at"], reason=s.get("reason")) for s in (o.status_history or [])],
             commission=o.commission, reserved_cash=o.reserved_cash,
             reject_reason=o.reject_reason,
             created_at=o.created_at.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
@@ -1068,7 +1148,7 @@ def get_order(order_id: str, auth: dict = Depends(get_authenticated_client), db:
         limit_price=order.limit_price, stop_price=order.stop_price,
         time_in_force=order.time_in_force,
         status=order.status,
-        status_history=[OrderStatusHistory(status=s["status"], at=s["at"]) for s in (order.status_history or [])],
+        status_history=[OrderStatusHistory(status=s["status"], at=s["at"], reason=s.get("reason")) for s in (order.status_history or [])],
         commission=order.commission, reserved_cash=order.reserved_cash,
         reject_reason=order.reject_reason,
         created_at=order.created_at.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",

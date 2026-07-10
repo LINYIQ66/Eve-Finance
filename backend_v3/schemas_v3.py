@@ -172,6 +172,7 @@ class OrderCreate(BaseModel):
 class OrderStatusHistory(BaseModel):
     status: str
     at: str
+    reason: Optional[str] = None
 
 
 class OrderOut(BaseModel):
