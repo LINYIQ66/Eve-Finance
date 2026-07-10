@@ -164,26 +164,16 @@ def register_client(
     country: str = "HK",
     db: Session = Depends(get_db),
 ):
-    """Register a new client with auto-created USD + HKD demo accounts."""
+    """Register new demo accounts under Anonymous Demo client. No OAuth needed."""
     import secrets
     tenant = db.query(Tenant).first()
-    if not tenant:
-        raise_eve("SERVICE_UNAVAILABLE", "No tenant configured")
+    client = db.query(V3Client).filter(V3Client.legal_name == "Anonymous Demo").first()
+    if not client or not tenant:
+        raise_eve("SERVICE_UNAVAILABLE", "Demo mode not configured")
 
-    api_key = gen_api_key()
-    api_secret = gen_secret()
-
-    client = V3Client(
-        tenant_id=tenant.id, legal_type="individual", legal_name=name,
-        country=country, base_currency="USD",
-        api_key=api_key, api_secret=api_secret,
-        status="active", risk_tier="low",
-    )
-    db.add(client)
-    db.flush()
-
-    # Create 2 accounts: USD + HKD
     total_acc = db.query(V3Account).count()
+    ref_id = secrets.token_hex(8)
+
     acct_usd = V3Account(
         tenant_id=tenant.id, client_id=client.id,
         account_number=f"EVE-{country}-{total_acc+1:04d}",
@@ -199,13 +189,12 @@ def register_client(
         status="active", trading_permissions={"markets": ["HK"], "order_types": ["market", "limit", "stop"]},
     )
     db.add(acct_hkd)
-    db.flush()  # ensure accounts get IDs before creating ledger entries
+    db.flush()
 
-    # Seed with demo balance via ledger
-    import random
+    # Seed with demo balance
     usd_ltx = V3LedgerTransaction(
         account_id=acct_usd.id, journal_type="deposit", status="posted",
-        reference_type="seed", reference_id=api_key[:8],
+        reference_type="seed", reference_id=ref_id,
     )
     db.add(usd_ltx)
     db.flush()
@@ -218,7 +207,7 @@ def register_client(
 
     hkd_ltx = V3LedgerTransaction(
         account_id=acct_hkd.id, journal_type="deposit", status="posted",
-        reference_type="seed", reference_id=api_key[:8],
+        reference_type="seed", reference_id=ref_id,
     )
     db.add(hkd_ltx)
     db.flush()
@@ -230,14 +219,10 @@ def register_client(
     ))
 
     db.commit()
-    db.refresh(client)
     db.refresh(acct_usd)
     db.refresh(acct_hkd)
 
     return eve_success({
-        "client_id": client.id,
-        "api_key": api_key,
-        "api_secret": api_secret,
         "accounts": [
             {"id": acct_usd.id, "currency": "USD", "number": acct_usd.account_number},
             {"id": acct_hkd.id, "currency": "HKD", "number": acct_hkd.account_number},
