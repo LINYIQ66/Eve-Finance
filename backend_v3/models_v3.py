@@ -25,7 +25,10 @@ def gen_token():
     return secrets.token_urlsafe(48)
 
 def gen_api_key():
-    return f"ev_live_{secrets.token_urlsafe(32)}"
+    return f"ev3_{secrets.token_urlsafe(16)}_v3"
+
+def gen_secret():
+    return secrets.token_hex(32)
 
 
 # ═══════════════════════════════════════════════

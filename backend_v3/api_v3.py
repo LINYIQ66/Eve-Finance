@@ -23,6 +23,30 @@ from schemas_v3 import *
 from ws_manager_v3 import ws_manager
 from webhook_v3 import fire_webhook_sync
 
+from models_v3 import Tenant, gen_api_key, gen_secret
+
+# ═══════════════════════════════════════════════
+# QUOTE CACHE (3s TTL)
+# ═══════════════════════════════════════════════
+_quote_cache = {}
+_quote_cache_time = {}
+
+def get_cached_quote(symbols: str):
+    """Return cached quote data if fresh (<3s)."""
+    key = symbols.upper().replace(" ", "")
+    now = time.time()
+    entry = _quote_cache.get(key)
+    ts = _quote_cache_time.get(key, 0)
+    if entry and (now - ts) < 3:
+        return entry
+    return None
+
+def set_quote_cache(symbols: str, data):
+    key = symbols.upper().replace(" ", "")
+    _quote_cache[key] = data
+    _quote_cache_time[key] = time.time()
+
+
 router = APIRouter(prefix="/v3")
 
 
@@ -126,6 +150,99 @@ def append_status(order, status: str, reason: str = None):
 
 def utcnow_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+
+
+# ═══════════════════════════════════════════════
+# AUTH: REGISTER (creates client + accounts)
+# ═══════════════════════════════════════════════
+
+@router.post("/auth/register")
+def register_client(
+    name: str = "Demo User",
+    country: str = "HK",
+    db: Session = Depends(get_db),
+):
+    """Register a new client with auto-created USD + HKD demo accounts."""
+    import secrets
+    tenant = db.query(Tenant).first()
+    if not tenant:
+        raise_eve("SERVICE_UNAVAILABLE", "No tenant configured")
+
+    api_key = gen_api_key()
+    api_secret = gen_secret()
+
+    client = V3Client(
+        tenant_id=tenant.id, legal_type="individual", legal_name=name,
+        country=country, base_currency="USD",
+        api_key=api_key, api_secret=api_secret,
+        status="active", risk_tier="low",
+    )
+    db.add(client)
+    db.flush()
+
+    # Create 2 accounts: USD + HKD
+    total_acc = db.query(V3Account).count()
+    acct_usd = V3Account(
+        tenant_id=tenant.id, client_id=client.id,
+        account_number=f"EVE-{country}-{total_acc+1:04d}",
+        type="cash", base_currency="USD",
+        status="active", trading_permissions={"markets": ["US", "HK"], "order_types": ["market", "limit", "stop"]},
+    )
+    db.add(acct_usd)
+
+    acct_hkd = V3Account(
+        tenant_id=tenant.id, client_id=client.id,
+        account_number=f"EVE-{country}-{total_acc+2:04d}",
+        type="cash", base_currency="HKD",
+        status="active", trading_permissions={"markets": ["HK"], "order_types": ["market", "limit", "stop"]},
+    )
+    db.add(acct_hkd)
+    db.flush()  # ensure accounts get IDs before creating ledger entries
+
+    # Seed with demo balance via ledger
+    import random
+    usd_ltx = V3LedgerTransaction(
+        account_id=acct_usd.id, journal_type="deposit", status="posted",
+        reference_type="seed", reference_id=api_key[:8],
+    )
+    db.add(usd_ltx)
+    db.flush()
+    db.add(V3LedgerEntry(
+        transaction_id=usd_ltx.id, account_id=acct_usd.id,
+        currency="USD", direction="credit",
+        amount="100000.00", entry_type="principal",
+        value_date=datetime.now(timezone.utc),
+    ))
+
+    hkd_ltx = V3LedgerTransaction(
+        account_id=acct_hkd.id, journal_type="deposit", status="posted",
+        reference_type="seed", reference_id=api_key[:8],
+    )
+    db.add(hkd_ltx)
+    db.flush()
+    db.add(V3LedgerEntry(
+        transaction_id=hkd_ltx.id, account_id=acct_hkd.id,
+        currency="HKD", direction="credit",
+        amount="1000000.00", entry_type="principal",
+        value_date=datetime.now(timezone.utc),
+    ))
+
+    db.commit()
+    db.refresh(client)
+    db.refresh(acct_usd)
+    db.refresh(acct_hkd)
+
+    return eve_success({
+        "client_id": client.id,
+        "api_key": api_key,
+        "api_secret": api_secret,
+        "accounts": [
+            {"id": acct_usd.id, "currency": "USD", "number": acct_usd.account_number},
+            {"id": acct_hkd.id, "currency": "HKD", "number": acct_hkd.account_number},
+        ],
+    })
 
 
 # ═══════════════════════════════════════════════
@@ -243,6 +360,10 @@ def get_quotes(
     auth: dict = Depends(get_authenticated_client),
     db: Session = Depends(get_db),
 ):
+    # Cache (3s TTL)
+    cached = get_cached_quote(symbols)
+    if cached:
+        return cached
     """Get latest quotes. Uses eve-stock-app for HK, Alpaca for US."""
     import httpx
     symbol_list = [s.strip() for s in symbols.split(",") if s.strip()]
@@ -313,6 +434,7 @@ def get_quotes(
             "delayed": False,
             "as_of": utcnow_str(),
         })
+    set_quote_cache(symbols, eve_success(results))
     return eve_success(results)
 
 
@@ -1768,22 +1890,44 @@ def market_snapshots(symbols: str = Query(...), auth: dict = Depends(get_authent
 
 @router.get("/market/bars")
 def market_bars(symbols: str = Query(...), timeframe: str = "1D", limit: int = 100, auth: dict = Depends(get_authenticated_client)):
-    """Get historical bars."""
+    """Get historical bars/candles. US stocks via Alpaca, HK stocks via Eastmoney."""
     import httpx
     sym_list = [s.strip() for s in symbols.split(",") if s.strip()]
     results = {}
+    klt_map = {"1m": "101", "5m": "102", "15m": "103", "30m": "104",
+               "60m": "105", "1D": "106", "1d": "106", "1w": "107", "1M": "108"}
+
     for sym in sym_list:
         try:
-            r = httpx.get(
-                f"https://data.alpaca.markets/v2/stocks/{sym}/bars",
-                params={"timeframe": timeframe, "limit": limit, "adjustment": "split"},
-                headers={"APCA-API-KEY-ID": "PKNIZEG473HN2TKETLMTNOTHBY",
-                         "APCA-API-SECRET-KEY": "BgBkVXWqrtRJ4bP9EVxeDUBHLZrca7HRjqXKBBo5S2XP"},
-                timeout=10
-            )
-            if r.status_code == 200:
-                bars = r.json().get("bars", [])
-                results[sym] = [{"t": b.get("t"), "o": b.get("o"), "h": b.get("h"), "l": b.get("l"), "c": b.get("c"), "v": b.get("v")} for b in bars]
+            if sym.endswith(".HK"):
+                # HK k-line from Tencent Finance (free)
+                hk_code = sym.replace(".HK", "").zfill(5)
+                freq_map = {"1m": "5min", "5m": "15min", "15m": "30min", "30m": "30min",
+                            "60m": "60min", "1D": "day", "1d": "day", "1w": "week", "1M": "month"}
+                freq = freq_map.get(timeframe, "day")
+                r = httpx.get(
+                    f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk{hk_code},{freq},,,{limit},qfq",
+                    timeout=10
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    if data.get("data") and data["data"].get(f"hk{hk_code}"):
+                        raw = data["data"][f"hk{hk_code}"].get(freq, [])
+                        results[sym] = [{"t": c[0], "o": c[1], "c": c[2],
+                                         "h": c[3], "l": c[4], "v": str(int(float(c[5])))} for c in raw[:limit]]
+            else:
+                # US bars from Alpaca
+                r = httpx.get(
+                    f"https://data.alpaca.markets/v2/stocks/{sym}/bars",
+                    params={"timeframe": timeframe, "limit": limit, "adjustment": "split"},
+                    headers={"APCA-API-KEY-ID": "PKNIZEG473HN2TKETLMTNOTHBY",
+                             "APCA-API-SECRET-KEY": "BgBkVXWqrtRJ4bP9EVxeDUBHLZrca7HRjqXKBBo5S2XP"},
+                    timeout=10
+                )
+                if r.status_code == 200:
+                    bars = r.json().get("bars", [])
+                    results[sym] = [{"t": b.get("t"), "o": b.get("o"), "h": b.get("h"),
+                                     "l": b.get("l"), "c": b.get("c"), "v": b.get("v")} for b in bars]
         except Exception:
             pass
     return eve_success(results)
@@ -1971,6 +2115,64 @@ async def swagger_ui():
 <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
 </body></html>"""
     return HTMLResponse(content=html)
+
+
+
+# ═══════════════════════════════════════════════
+# MARKET: HK K-LINE (candlestick chart data)
+# ═══════════════════════════════════════════════
+
+@router.get("/market/klines")
+def market_klines(
+    symbol: str = Query(...),
+    timeframe: str = "1d",
+    limit: int = 100,
+    auth: dict = Depends(get_authenticated_client),
+):
+    """Get candlestick/k-line data.
+    US stocks via Alpaca, HK stocks via Sina/Eastmoney.
+    timeframe: 1m, 5m, 15m, 30m, 60m, 1d, 1w, 1M
+    """
+    import httpx
+
+    if symbol.endswith(".HK"):
+        # HK k-line from Tencent Finance (free, real-time)
+        hk_code = symbol.replace(".HK", "").zfill(5)
+        freq_map = {"1m": "5min", "5m": "15min", "15m": "30min", "30m": "30min",
+                     "60m": "60min", "1D": "day", "1d": "day", "1w": "week", "1M": "month"}
+        freq = freq_map.get(timeframe, "day")
+        try:
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk{hk_code},{freq},,,{limit},qfq"
+            r = httpx.get(url, timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("data") and data["data"].get(f"hk{hk_code}"):
+                    raw = data["data"][f"hk{hk_code}"].get(freq, [])
+                    candles = [{"t": c[0], "o": c[1], "c": c[2],
+                                "h": c[3], "l": c[4], "v": str(int(float(c[5])))} for c in raw[:limit]]
+                    return eve_success({"symbol": symbol, "timeframe": timeframe, "candles": candles})
+        except Exception:
+            pass
+        return eve_success({"symbol": symbol, "timeframe": timeframe, "candles": []})
+    else:
+        # US k-line via Alpaca
+        try:
+            r = httpx.get(
+                f"https://data.alpaca.markets/v2/stocks/{symbol}/bars",
+                params={"timeframe": timeframe, "limit": limit, "adjustment": "split"},
+                headers={"APCA-API-KEY-ID": "PKNIZEG473HN2TKETLMTNOTHBY",
+                         "APCA-API-SECRET-KEY": "BgBkVXWqrtRJ4bP9EVxeDUBHLZrca7HRjqXKBBo5S2XP"},
+                timeout=10
+            )
+            if r.status_code == 200:
+                bars = r.json().get("bars", [])
+                candles = [{"t": b.get("t"), "o": b.get("o"), "h": b.get("h"),
+                            "l": b.get("l"), "c": b.get("c"), "v": b.get("v")} for b in bars]
+                return eve_success({"symbol": symbol, "timeframe": timeframe, "candles": candles})
+        except Exception:
+            pass
+        return eve_success({"symbol": symbol, "timeframe": timeframe, "candles": []})
+
 
 # ═══════════════════════════════════════════════
 # INTERNAL: bank event callback
