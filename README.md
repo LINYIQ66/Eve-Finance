@@ -6,6 +6,27 @@
 
 ---
 
+## Broker Integration Network
+
+EVE FINANCE aggregates 10+ global brokers through a unified API. One integration — access every market.
+
+| Broker | Markets | Asset Classes | Status |
+|--------|---------|---------------|--------|
+| [Interactive Brokers](https://www.interactivebrokers.com) | US, HK, EU, SG, JP, AU, UK | Stocks, Options, Futures, FX, Bonds | 🔌 Primary |
+| [Alpaca Markets](https://alpaca.markets) | US | Stocks, ETFs, Options | ✅ Live |
+| [Charles Schwab](https://www.schwab.com) | US | Stocks, ETFs, Mutual Funds, Options | 🔌 Integration |
+| [Fidelity Investments](https://www.fidelity.com) | US | Stocks, ETFs, Mutual Funds, Fixed Income | 🔌 Integration |
+| [Saxo Bank](https://www.home.saxo) | EU, HK, SG, JP, AU | Stocks, ETFs, FX, Options, Futures | 🔌 Integration |
+| [Tiger Brokers](https://www.tigerbrokers.com) | US, HK, SG, AU | Stocks, ETFs, Options, Futures | 🔌 Integration |
+| [Futu Holdings (Moomoo)](https://www.futuhk.com) | US, HK, SG | Stocks, ETFs, Options | 🔌 Integration |
+| [PhillipCapital (POEMS)](https://www.phillip.com.sg) | SG, HK, US, MY, TH, ID | Stocks, ETFs, REITs, DLCs | 🔌 Integration |
+| [CGS International Securities](https://www.cgs-cimb.com) | SG, MY, TH, ID, HK | Stocks, ETFs, Warrants, DLCs | 🔌 Integration |
+| [KGI Securities](https://www.kgi.com) | TW, HK, SG, TH | Stocks, ETFs, Options, Futures | 🔌 Integration |
+
+**White-label advantage:** Switch or combine brokers per account — no code changes. Clients trade US stocks via Alpaca and HK stocks via Tiger/Futu on the same account, same UI.
+
+---
+
 ## Architecture
 
 | Component | Stack |
