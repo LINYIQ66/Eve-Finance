@@ -1,0 +1,892 @@
+{
+  "service": "EVE Finance v3 API",
+  "version": "3.0",
+  "base_url": "https://YOUR_DOMAIN:8802",
+  "auth": "OAuth2 Bearer token via POST /v3/oauth/token",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/",
+      "summary": "Root",
+      "description": "",
+      "params": [],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/accounts",
+      "summary": "List Accounts",
+      "description": "",
+      "params": [],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/accounts/{account_id}/ledger",
+      "summary": "Get Ledger",
+      "description": "",
+      "params": [
+        {
+          "name": "account_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "currency",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "from_date",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "to_date",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/accounts/{account_id}/summary",
+      "summary": "Account Summary",
+      "description": "",
+      "params": [
+        {
+          "name": "account_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "base_currency",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/accounts",
+      "summary": "Admin Create Account",
+      "description": "Create a trading account for a client (admin).",
+      "params": [],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/admin/audit-events",
+      "summary": "Admin Audit Events",
+      "description": "",
+      "params": [
+        {
+          "name": "action",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "object_type",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/clients",
+      "summary": "Admin Create Client",
+      "description": "Create a new client (admin).",
+      "params": [],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v3/admin/clients/{client_id}",
+      "summary": "Admin Update Client",
+      "description": "Update client (admin).",
+      "params": [
+        {
+          "name": "client_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "risk_tier",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/admin/deposits",
+      "summary": "Admin List Deposits",
+      "description": "",
+      "params": [
+        {
+          "name": "status",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "currency",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "min_amount",
+          "in": "query",
+          "required": false,
+          "type": "number"
+        },
+        {
+          "name": "sort",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/deposits/{deposit_id}/approve",
+      "summary": "Approve Deposit",
+      "description": "",
+      "params": [
+        {
+          "name": "deposit_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/kill-switch",
+      "summary": "Admin Kill Switch",
+      "description": "Emergency kill switch.",
+      "params": [
+        {
+          "name": "account_id",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "action",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/ledger-adjustments",
+      "summary": "Create Ledger Adjustment",
+      "description": "",
+      "params": [
+        {
+          "name": "x-idempotency-key",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/admin/reconciliation/breaks",
+      "summary": "Admin Reconciliation Breaks",
+      "description": "Query reconciliation breaks.",
+      "params": [
+        {
+          "name": "status",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/reconciliation/run",
+      "summary": "Admin Run Reconciliation",
+      "description": "Run reconciliation (simulated).",
+      "params": [
+        {
+          "name": "business_date",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "currency",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/admin/withdrawals",
+      "summary": "Admin List Withdrawals",
+      "description": "",
+      "params": [
+        {
+          "name": "status",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/withdrawals/{withdrawal_id}/approve",
+      "summary": "Admin Approve Withdrawal",
+      "description": "Approve a withdrawal request (admin).",
+      "params": [
+        {
+          "name": "withdrawal_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/assets",
+      "summary": "Search Assets",
+      "description": "",
+      "params": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "market",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/auth/register",
+      "summary": "Register Client",
+      "description": "Register new demo accounts under Anonymous Demo client. No OAuth needed.",
+      "params": [
+        {
+          "name": "name",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/fees/estimate",
+      "summary": "Fee Estimate",
+      "description": "",
+      "params": [],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/fills",
+      "summary": "List Fills",
+      "description": "",
+      "params": [
+        {
+          "name": "account_id",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/funding/deposits",
+      "summary": "Create Deposit",
+      "description": "",
+      "params": [
+        {
+          "name": "x-idempotency-key",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/funding/deposits/{deposit_id}",
+      "summary": "Get Deposit",
+      "description": "",
+      "params": [
+        {
+          "name": "deposit_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/funding/withdrawals",
+      "summary": "Create Withdrawal",
+      "description": "",
+      "params": [
+        {
+          "name": "x-idempotency-key",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/funding/withdrawals/{withdrawal_id}",
+      "summary": "Get Withdrawal",
+      "description": "",
+      "params": [
+        {
+          "name": "withdrawal_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/fx/conversions",
+      "summary": "Execute Fx Conversion",
+      "description": "Execute a previously quoted FX conversion.",
+      "params": [
+        {
+          "name": "x-idempotency-key",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/fx/quotes",
+      "summary": "Create Fx Quote",
+      "description": "Create an executable FX quote — mid-market rate, zero fee, zero spread.",
+      "params": [],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/fx/rates",
+      "summary": "Get Fx Rates",
+      "description": "Real-time FX rates — mid-market, zero fee, multi-source cross-validation.",
+      "params": [
+        {
+          "name": "base",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "quotes",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/health",
+      "summary": "Health",
+      "description": "",
+      "params": [],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/internal/bank-events",
+      "summary": "Bank Event",
+      "description": "Internal endpoint: bank callback for funds detection.",
+      "params": [
+        {
+          "name": "x-idempotency-key",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/bars",
+      "summary": "Market Bars",
+      "description": "Get historical bars/candles. US stocks via Alpaca, HK stocks via Eastmoney.",
+      "params": [
+        {
+          "name": "symbols",
+          "in": "query",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "timeframe",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/clock",
+      "summary": "Market Clock",
+      "description": "Market clock for US + HK.",
+      "params": [],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/klines",
+      "summary": "Market Klines",
+      "description": "Get candlestick/k-line data.\nUS stocks via Alpaca, HK stocks via Sina/Eastmoney.\ntimeframe: 1m, 5m, 15m, 30m, 60m, 1d, 1w, 1M",
+      "params": [
+        {
+          "name": "symbol",
+          "in": "query",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "timeframe",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/quotes",
+      "summary": "Get Quotes",
+      "description": "",
+      "params": [
+        {
+          "name": "symbols",
+          "in": "query",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "fields",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/snapshots",
+      "summary": "Market Snapshots",
+      "description": "Get stock snapshots (price, change, volume).",
+      "params": [
+        {
+          "name": "symbols",
+          "in": "query",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/oauth/token",
+      "summary": "Oauth Token",
+      "description": "",
+      "params": [
+        {
+          "name": "grant_type",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "scope",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "authorization",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/orders",
+      "summary": "Submit Order",
+      "description": "",
+      "params": [
+        {
+          "name": "x-idempotency-key",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/orders",
+      "summary": "List Orders",
+      "description": "",
+      "params": [
+        {
+          "name": "account_id",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/v3/orders",
+      "summary": "Cancel All Orders",
+      "description": "Cancel all open orders.",
+      "params": [
+        {
+          "name": "account_id",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/orders/preview",
+      "summary": "Order Preview",
+      "description": "",
+      "params": [],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/orders/{order_id}",
+      "summary": "Get Order",
+      "description": "",
+      "params": [
+        {
+          "name": "order_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/v3/orders/{order_id}",
+      "summary": "Cancel Order",
+      "description": "",
+      "params": [
+        {
+          "name": "order_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "x-idempotency-key",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "PATCH",
+      "path": "/v3/orders/{order_id}",
+      "summary": "Replace Order",
+      "description": "",
+      "params": [
+        {
+          "name": "order_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "x-idempotency-key",
+          "in": "header",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/positions",
+      "summary": "List Positions",
+      "description": "",
+      "params": [
+        {
+          "name": "account_id",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/v3/positions/{symbol}",
+      "summary": "Close Position",
+      "description": "Close a specific position.",
+      "params": [
+        {
+          "name": "symbol",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/v3/webhooks",
+      "summary": "List Webhooks",
+      "description": "List webhook configs for the current client.",
+      "params": [],
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/v3/webhooks",
+      "summary": "Create Webhook",
+      "description": "Create a webhook config.",
+      "params": [
+        {
+          "name": "url",
+          "in": "query",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "secret",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/v3/webhooks/{webhook_id}",
+      "summary": "Delete Webhook",
+      "description": "Delete a webhook config.",
+      "params": [
+        {
+          "name": "webhook_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "body": null
+    }
+  ]
+}
