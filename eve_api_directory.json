@@ -1,0 +1,290 @@
+{
+  "name": "EVE Finance API Directory",
+  "version": "2026.07.10",
+  "description": "All EVE white-label API endpoints across 3 services",
+  "base_urls": {
+    "v2": "http://YOUR_HOST:8800",
+    "v3": "http://YOUR_HOST:8802",
+    "stock_app": "http://YOUR_HOST:8801"
+  },
+  "auth": {
+    "v2": "X-API-Key header or Authorization: Bearer <key>",
+    "v3": "Authorization: Bearer <token>",
+    "stock_app": "Session cookie (POST /api/login)"
+  },
+  "services": [
+    {
+      "service": "EVE Finance v2",
+      "port": 8800,
+      "description": "Brokerage API — accounts, orders, positions, market data, wallet",
+      "base_url": "http://YOUR_HOST:8800",
+      "groups": [
+        {
+          "group": "System",
+          "endpoints": [
+            { "method": "GET", "path": "/health", "description": "Service health check" },
+            { "method": "GET", "path": "/v2/health", "description": "v2 health check" }
+          ]
+        },
+        {
+          "group": "Market Data — Functions",
+          "endpoints": [
+            { "method": "GET", "path": "/api/functions/getStockPrices", "params": "?symbols=AAPL,MSFT", "description": "US stock real-time prices (Yahoo)" },
+            { "method": "GET", "path": "/api/functions/getAlpacaPrices", "params": "?symbols=AAPL,MSFT", "description": "US stock prices (Alpaca)" },
+            { "method": "GET", "path": "/api/functions/getHKStockPrices", "params": "?symbols=00700,09988", "description": "HK stock real-time prices (Tencent)" },
+            { "method": "GET", "path": "/api/functions/getMetalPrices", "description": "Gold/Silver spot prices" },
+            { "method": "GET", "path": "/api/functions/searchStocks", "params": "?q=AAPL", "description": "Search US stocks" },
+            { "method": "GET", "path": "/api/functions/searchHKStocks", "params": "?q=00700", "description": "Search HK stocks" }
+          ]
+        },
+        {
+          "group": "Market Data — Brokerage",
+          "endpoints": [
+            { "method": "GET", "path": "/v2/market/quotes", "params": "?symbols=AAPL,MSFT", "description": "Latest quotes" },
+            { "method": "GET", "path": "/v2/market/bars", "params": "?symbol=AAPL&timeframe=1Day&limit=100", "description": "Historical bars" },
+            { "method": "GET", "path": "/v2/market/snapshots", "params": "?symbols=AAPL,MSFT", "description": "Stock snapshots" },
+            { "method": "GET", "path": "/v2/market/clock", "description": "Market clock (US + HK)" },
+            { "method": "GET", "path": "/v2/market/level2", "params": "?symbol=AAPL", "description": "Level 2 order book" },
+            { "method": "GET", "path": "/v2/assets", "params": "?search=AAPL", "description": "Search assets (US + OTC)" },
+            { "method": "GET", "path": "/v2/corporate-actions/announcements", "description": "Corporate actions" }
+          ]
+        },
+        {
+          "group": "Accounts",
+          "endpoints": [
+            { "method": "GET", "path": "/v2/accounts", "description": "List accounts" },
+            { "method": "POST", "path": "/v2/accounts", "body": "{currency: 'USD'}", "description": "Create account" },
+            { "method": "GET", "path": "/v2/accounts/{account_id}", "description": "Get account detail" },
+            { "method": "GET", "path": "/v2/accounts/{account_id}/summary", "description": "Account summary" },
+            { "method": "PATCH", "path": "/v2/accounts/{account_id}/default", "description": "Set default account" }
+          ]
+        },
+        {
+          "group": "Orders & Positions",
+          "endpoints": [
+            { "method": "POST", "path": "/v2/orders", "body": "{symbol,side,qty,type,time_in_force}", "description": "Place order" },
+            { "method": "GET", "path": "/v2/orders", "params": "?status=open", "description": "List orders" },
+            { "method": "GET", "path": "/v2/orders/{order_id}", "description": "Get order" },
+            { "method": "DELETE", "path": "/v2/orders/{order_id}", "description": "Cancel order" },
+            { "method": "DELETE", "path": "/v2/orders", "description": "Cancel all orders" },
+            { "method": "GET", "path": "/v2/orders/{order_id}/fills", "description": "Get order fills" },
+            { "method": "GET", "path": "/v2/fills", "description": "List all fills" },
+            { "method": "GET", "path": "/v2/positions", "description": "List positions" },
+            { "method": "DELETE", "path": "/v2/positions/{symbol}", "description": "Close position" }
+          ]
+        },
+        {
+          "group": "FX & Fees",
+          "endpoints": [
+            { "method": "GET", "path": "/v2/fx/rates", "description": "Get exchange rates" },
+            { "method": "POST", "path": "/v2/fx/convert", "body": "{from_currency, to_currency, amount}", "description": "Currency conversion" },
+            { "method": "GET", "path": "/v2/fees", "description": "List fees" },
+            { "method": "GET", "path": "/v2/fees/model", "description": "Fee & FX model" }
+          ]
+        },
+        {
+          "group": "Unified Wallet (PostgreSQL)",
+          "endpoints": [
+            { "method": "GET", "path": "/wallet/balances", "description": "Multi-currency balances + USD total" },
+            { "method": "GET", "path": "/wallet/positions", "description": "Stock holdings" },
+            { "method": "POST", "path": "/wallet/deposit", "body": "{currency, amount}", "description": "Deposit funds" },
+            { "method": "POST", "path": "/wallet/withdraw", "body": "{currency, amount}", "description": "Withdraw funds" },
+            { "method": "POST", "path": "/wallet/convert", "body": "{from_currency, to_currency, amount}", "description": "FX convert — zero fee, mid-market" },
+            { "method": "POST", "path": "/wallet/trade", "body": "{symbol, side, quantity, market}", "description": "Buy/sell stocks — server-side validated" },
+            { "method": "POST", "path": "/wallet/transfer", "body": "{to_user_id, currency, amount}", "description": "User-to-user transfer" },
+            { "method": "GET", "path": "/wallet/ledger", "params": "?currency=USD&limit=50", "description": "Full audit trail (double-entry)" },
+            { "method": "GET", "path": "/wallet/transactions", "params": "?type=convert&limit=50", "description": "Transaction history" },
+            { "method": "GET", "path": "/wallet/fx/rates", "params": "?quotes=HKD,USDT", "description": "Real-time FX rates (multi-source)" },
+            { "method": "GET", "path": "/wallet/statements", "description": "Financial statements" },
+            { "method": "POST", "path": "/wallet/statements/generate", "params": "?period=2026-07", "description": "Generate monthly statement" }
+          ]
+        },
+        {
+          "group": "Admin & Client",
+          "endpoints": [
+            { "method": "POST", "path": "/v1/register", "body": "{email, full_name}", "description": "Register for API key" },
+            { "method": "GET", "path": "/v1/admin/clients", "description": "List clients" },
+            { "method": "PATCH", "path": "/v1/admin/clients/{client_id}", "description": "Update client" },
+            { "method": "GET", "path": "/v1/admin/clients/{client_id}/fees", "description": "Client fees" },
+            { "method": "GET", "path": "/v1/admin/clients/{client_id}/orders", "description": "Client orders" },
+            { "method": "GET", "path": "/v1/admin/stats", "description": "Platform stats" },
+            { "method": "PATCH", "path": "/v2/admin/accounts/{account_id}/balance", "description": "Adjust balance" }
+          ]
+        }
+      ]
+    },
+    {
+      "service": "EVE Finance v3",
+      "port": 8802,
+      "description": "Institutional API — OAuth2, audit, reconciliation, webhooks, kill-switch",
+      "base_url": "http://YOUR_HOST:8802",
+      "groups": [
+        {
+          "group": "System",
+          "endpoints": [
+            { "method": "GET", "path": "/v3/health", "description": "Health check" },
+            { "method": "GET", "path": "/", "description": "Root info" }
+          ]
+        },
+        {
+          "group": "Auth",
+          "endpoints": [
+            { "method": "POST", "path": "/v3/auth/register", "body": "{legal_name, email}", "description": "Register client" },
+            { "method": "POST", "path": "/v3/oauth/token", "body": "{grant_type, client_id, client_secret}", "description": "OAuth token" }
+          ]
+        },
+        {
+          "group": "Market Data",
+          "endpoints": [
+            { "method": "GET", "path": "/v3/market/quotes", "params": "?symbols=AAPL,00700", "description": "Get quotes" },
+            { "method": "GET", "path": "/v3/market/bars", "params": "?symbol=AAPL&timeframe=1Day", "description": "Market bars" },
+            { "method": "GET", "path": "/v3/market/klines", "params": "?symbol=AAPL&timeframe=1d&limit=100", "description": "Candlestick data" },
+            { "method": "GET", "path": "/v3/market/snapshots", "params": "?symbols=AAPL", "description": "Market snapshots" },
+            { "method": "GET", "path": "/v3/market/clock", "description": "Market clock" },
+            { "method": "GET", "path": "/v3/assets", "params": "?search=AAPL", "description": "Search assets" }
+          ]
+        },
+        {
+          "group": "Accounts & Ledger",
+          "endpoints": [
+            { "method": "GET", "path": "/v3/accounts", "description": "List accounts" },
+            { "method": "GET", "path": "/v3/accounts/{account_id}/summary", "description": "Account summary" },
+            { "method": "GET", "path": "/v3/accounts/{account_id}/ledger", "description": "Get ledger" }
+          ]
+        },
+        {
+          "group": "Orders",
+          "endpoints": [
+            { "method": "POST", "path": "/v3/orders", "body": "{symbol, side, quantity, order_type}", "description": "Submit order" },
+            { "method": "POST", "path": "/v3/orders/preview", "body": "{symbol, side, quantity}", "description": "Preview order" },
+            { "method": "GET", "path": "/v3/orders", "description": "List orders" },
+            { "method": "GET", "path": "/v3/orders/{order_id}", "description": "Get order" },
+            { "method": "DELETE", "path": "/v3/orders/{order_id}", "description": "Cancel order" },
+            { "method": "PATCH", "path": "/v3/orders/{order_id}", "description": "Replace order" },
+            { "method": "DELETE", "path": "/v3/orders", "description": "Cancel all orders" },
+            { "method": "GET", "path": "/v3/fills", "description": "List fills" },
+            { "method": "GET", "path": "/v3/positions", "description": "List positions" },
+            { "method": "DELETE", "path": "/v3/positions/{symbol}", "description": "Close position" }
+          ]
+        },
+        {
+          "group": "FX & Fees",
+          "endpoints": [
+            { "method": "GET", "path": "/v3/fx/rates", "description": "Get FX rates" },
+            { "method": "POST", "path": "/v3/fx/quotes", "body": "{from_currency, to_currency, amount}", "description": "Create FX quote" },
+            { "method": "POST", "path": "/v3/fx/conversions", "body": "{quote_id}", "description": "Execute FX conversion" },
+            { "method": "POST", "path": "/v3/fees/estimate", "body": "{symbol, side, quantity}", "description": "Fee estimate" }
+          ]
+        },
+        {
+          "group": "Funding",
+          "endpoints": [
+            { "method": "POST", "path": "/v3/funding/deposits", "body": "{currency, amount}", "description": "Create deposit" },
+            { "method": "GET", "path": "/v3/funding/deposits/{deposit_id}", "description": "Get deposit status" },
+            { "method": "POST", "path": "/v3/funding/withdrawals", "body": "{currency, amount}", "description": "Create withdrawal" },
+            { "method": "GET", "path": "/v3/funding/withdrawals/{withdrawal_id}", "description": "Get withdrawal status" }
+          ]
+        },
+        {
+          "group": "Admin",
+          "endpoints": [
+            { "method": "POST", "path": "/v3/admin/clients", "description": "Create client" },
+            { "method": "PATCH", "path": "/v3/admin/clients/{client_id}", "description": "Update client" },
+            { "method": "POST", "path": "/v3/admin/accounts", "description": "Create account" },
+            { "method": "POST", "path": "/v3/admin/ledger-adjustments", "description": "Create ledger adjustment" },
+            { "method": "GET", "path": "/v3/admin/deposits", "description": "List deposits" },
+            { "method": "POST", "path": "/v3/admin/deposits/{deposit_id}/approve", "description": "Approve deposit" },
+            { "method": "GET", "path": "/v3/admin/withdrawals", "description": "List withdrawals" },
+            { "method": "POST", "path": "/v3/admin/withdrawals/{withdrawal_id}/approve", "description": "Approve withdrawal" },
+            { "method": "GET", "path": "/v3/admin/audit-events", "description": "Audit events" },
+            { "method": "POST", "path": "/v3/admin/reconciliation/run", "description": "Run reconciliation" },
+            { "method": "GET", "path": "/v3/admin/reconciliation/breaks", "description": "Reconciliation breaks" },
+            { "method": "POST", "path": "/v3/admin/kill-switch", "description": "Kill switch (emergency stop)" }
+          ]
+        },
+        {
+          "group": "Webhooks",
+          "endpoints": [
+            { "method": "GET", "path": "/v3/webhooks", "description": "List webhooks" },
+            { "method": "POST", "path": "/v3/webhooks", "description": "Create webhook" },
+            { "method": "DELETE", "path": "/v3/webhooks/{webhook_id}", "description": "Delete webhook" }
+          ]
+        },
+        {
+          "group": "Internal",
+          "endpoints": [
+            { "method": "POST", "path": "/v3/internal/bank-events", "description": "Bank event ingestion" }
+          ]
+        }
+      ]
+    },
+    {
+      "service": "EVE Stock App",
+      "port": 8801,
+      "description": "Standalone stock trading app — auth, watchlist, trade, dashboard",
+      "base_url": "http://YOUR_HOST:8801",
+      "auth": "Session cookie via POST /api/login",
+      "groups": [
+        {
+          "group": "Auth",
+          "endpoints": [
+            { "method": "POST", "path": "/api/register", "body": "{username, password}", "description": "Register" },
+            { "method": "POST", "path": "/api/login", "body": "{username, password}", "description": "Login" }
+          ]
+        },
+        {
+          "group": "US Stocks",
+          "endpoints": [
+            { "method": "GET", "path": "/api/quote", "params": "?symbol=AAPL", "description": "Get quote" },
+            { "method": "GET", "path": "/api/snapshot", "params": "?symbol=AAPL", "description": "Get snapshot" },
+            { "method": "GET", "path": "/api/search", "params": "?q=AAPL", "description": "Search stocks" },
+            { "method": "GET", "path": "/api/market-status", "description": "Market open/closed" }
+          ]
+        },
+        {
+          "group": "Trading",
+          "endpoints": [
+            { "method": "POST", "path": "/api/trade", "body": "{symbol, side, quantity}", "description": "Place trade" },
+            { "method": "GET", "path": "/api/trades", "description": "List trades" },
+            { "method": "GET", "path": "/api/dashboard", "description": "Dashboard overview" }
+          ]
+        },
+        {
+          "group": "Watchlist",
+          "endpoints": [
+            { "method": "GET", "path": "/api/watchlist", "description": "Get watchlist" },
+            { "method": "POST", "path": "/api/watchlist", "body": "{symbol}", "description": "Add to watchlist" },
+            { "method": "DELETE", "path": "/api/watchlist/{symbol}", "description": "Remove from watchlist" }
+          ]
+        },
+        {
+          "group": "HK Stocks",
+          "endpoints": [
+            { "method": "GET", "path": "/api/hk/list", "description": "List HK stocks" },
+            { "method": "GET", "path": "/api/hk/quote", "params": "?symbol=00700", "description": "HK quote (simple)" },
+            { "method": "GET", "path": "/api/hk/quote-full", "params": "?symbol=00700", "description": "HK quote (full details)" },
+            { "method": "GET", "path": "/api/hk/search", "params": "?q=00700", "description": "Search HK stocks" }
+          ]
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_services": 3,
+    "total_endpoints": 115,
+    "v2_endpoints": 46,
+    "v3_endpoints": 38,
+    "stock_app_endpoints": 16,
+    "wallet_endpoints": 12,
+    "external_domains": [
+      "app.evemetal.com",
+      "YOUR_DOMAIN"
+    ],
+    "data_sources": {
+      "us_stocks": ["Yahoo Finance", "Alpaca (IEX)"],
+      "hk_stocks": ["Tencent (qt.gtimg.cn)", "Sina"],
+      "fx": ["open.er-api.com", "exchangerate-api.com", "Binance"],
+      "metals": ["Gold Price API"]
+    }
+  }
+}
