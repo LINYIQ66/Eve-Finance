@@ -1,0 +1,849 @@
+{
+  "name": "EVE FINANCE — White-Label Trading API v3.0",
+  "version": "3.0",
+  "updated": "2026-07-10",
+  "base_url": "https://sub.readinghero.xyz/eve-finance",
+  "api_prefix": "/v3",
+  "protocols": ["HTTPS REST", "WebSocket"],
+  "markets": ["US equities", "HK equities", "FX cash conversion"],
+  "auth_mode": "Anonymous (no key needed) or OAuth2 client_credentials",
+  "environments": {
+    "sandbox": "https://sandbox-api.evefinance.example/v3",
+    "uat": "https://uat-api.evefinance.example/v3",
+    "production": "https://sub.readinghero.xyz/eve-finance/v3"
+  },
+  "standard_headers": {
+    "Authorization": "Bearer <access_token> (required for protected endpoints)",
+    "X-API-Key": "ev_live_... (service integrations)",
+    "Content-Type": "application/json",
+    "Idempotency-Key": "UUID unique for ≥24 hours (all financial writes)",
+    "X-Request-ID": "Caller correlation ID (recommended)",
+    "X-Tenant-ID": "Tenant UUID (platform/admin only)",
+    "X-EVE-Version": "2026-07-10 (optional)"
+  },
+  "scopes": {
+    "market:read": "Asset search, quotes, bars, clocks and FX indicative rates",
+    "accounts:read": "Account profiles, balances, positions and statements",
+    "orders:write": "Preview, submit, replace and cancel orders",
+    "fx:write": "Create executable FX quotes and currency conversions",
+    "funding:write": "Create deposit/withdrawal instructions; no approval",
+    "admin:funding:approve": "Approve/reject funding operations",
+    "admin:ledger:adjust": "Create controlled adjustment journal",
+    "admin:clients:write": "Suspend clients, change limits and permissions",
+    "audit:read": "Read immutable audit events and reconciliation reports"
+  },
+  "rate_limits": {
+    "market_snapshots": "60 req/min/key; batch up to 100 symbols",
+    "order_writes": "30 req/sec/account with burst controls",
+    "funding_writes": "10 req/min/client",
+    "admin_search": "120 req/min/admin",
+    "webhook_delivery": "Exponential retry for 24 hours; dead-letter queue after"
+  },
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/v3/oauth/token",
+      "group": "Authentication",
+      "summary": "Issue access token",
+      "auth": "Basic (client_id:client_secret)",
+      "content_type": "application/x-www-form-urlencoded",
+      "params": {
+        "grant_type": "client_credentials",
+        "scope": "accounts:read orders:write funding:read"
+      },
+      "response": {
+        "access_token": "eyJhbGciOi...",
+        "token_type": "Bearer",
+        "expires_in": 900,
+        "scope": "accounts:read orders:write funding:read"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/health",
+      "group": "System",
+      "summary": "Health check",
+      "auth": "none",
+      "response": {
+        "status": "ok",
+        "version": "3.0"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/assets",
+      "group": "Market Data",
+      "summary": "Search asset master",
+      "auth": "Bearer",
+      "params": {
+        "query": "string — search term (e.g. '0700')",
+        "market": "string — US, HK",
+        "status": "string — active, inactive"
+      },
+      "response_example": {
+        "data": [{
+          "asset_id": "ast_hk_00700",
+          "symbol": "0700.HK",
+          "name": "Tencent Holdings Ltd",
+          "asset_class": "equity",
+          "exchange": "SEHK",
+          "currency": "HKD",
+          "lot_size": 100,
+          "odd_lot_supported": false,
+          "tick_size_rule_id": "HKEX_EQ_2026",
+          "shortable": false,
+          "fractionable": false,
+          "trade_status": "tradable"
+        }]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/quotes",
+      "group": "Market Data",
+      "summary": "Quote snapshot",
+      "auth": "Bearer",
+      "params": {
+        "symbols": "string — comma-separated (e.g. 'AAPL,0700.HK')",
+        "fields": "string — last,bid,ask,bid_size,ask_size,lot_size"
+      },
+      "response_example": {
+        "data": [
+          {"symbol": "AAPL", "currency": "USD", "last": "222.18", "bid": "222.16", "ask": "222.20", "bid_size": "400", "ask_size": "300", "delayed": false, "as_of": "2026-07-10T03:32:01.245Z"},
+          {"symbol": "0700.HK", "currency": "HKD", "last": "512.50", "bid": "512.00", "ask": "512.50", "bid_size": "1200", "ask_size": "800", "lot_size": 100, "delayed": false, "as_of": "2026-07-10T03:32:01.100Z"}
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/bars",
+      "group": "Market Data",
+      "summary": "Historical bars",
+      "auth": "Bearer",
+      "params": {
+        "symbol": "string — e.g. 'AAPL'",
+        "timeframe": "string — 1Min, 5Min, 15Min, 1Hour, 1Day",
+        "limit": "integer — number of bars",
+        "start": "date — ISO 8601",
+        "end": "date — ISO 8601"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/klines",
+      "group": "Market Data",
+      "summary": "Candlestick data",
+      "auth": "Bearer",
+      "params": {
+        "symbol": "string",
+        "timeframe": "string — 1d, 5d, 1m, etc.",
+        "limit": "integer"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/snapshots",
+      "group": "Market Data",
+      "summary": "Market snapshots",
+      "auth": "Bearer",
+      "params": {
+        "symbols": "string — comma-separated"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/market/clock",
+      "group": "Market Data",
+      "summary": "Market clock (US + HK status)",
+      "auth": "Bearer"
+    },
+    {
+      "method": "GET",
+      "path": "/v3/accounts",
+      "group": "Accounts",
+      "summary": "List accounts",
+      "auth": "Bearer"
+    },
+    {
+      "method": "GET",
+      "path": "/v3/accounts/{account_id}/summary",
+      "group": "Accounts",
+      "summary": "Account summary — NAV, balances, buying power",
+      "auth": "Bearer",
+      "params": {
+        "account_id": "path — account ID",
+        "base_currency": "query — valuation currency (e.g. 'SGD')"
+      },
+      "response_example": {
+        "data": {
+          "account_id": "acc_01JZ8",
+          "base_currency": "SGD",
+          "net_liquidation": "214325.47",
+          "cash_total": "132440.20",
+          "positions_market_value": "81885.27",
+          "buying_power": "121700.00",
+          "cash_by_currency": [
+            {"currency": "USD", "total": "70000.00", "settled": "65000.00", "available": "62000.00", "withdrawable": "59000.00"},
+            {"currency": "HKD", "total": "245000.00", "settled": "245000.00", "available": "225000.00", "withdrawable": "220000.00"}
+          ],
+          "valuation_fx_time": "2026-07-10T03:31:02Z"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/accounts/{account_id}/ledger",
+      "group": "Accounts",
+      "summary": "Cash ledger — immutable double-entry journal",
+      "auth": "Bearer",
+      "params": {
+        "account_id": "path",
+        "currency": "query — filter by currency",
+        "from_date": "query — ISO date",
+        "to_date": "query — ISO date",
+        "limit": "query — integer (default 100)",
+        "cursor": "query — pagination cursor"
+      },
+      "response_example": {
+        "data": [{
+          "entry_id": "le_01JZA31D",
+          "transaction_id": "ltx_01JZA31",
+          "account_id": "acc_01JZ8",
+          "currency": "USD",
+          "direction": "debit",
+          "amount": "10000.00",
+          "entry_type": "fx_conversion_principal",
+          "reference_type": "fx_conversion",
+          "reference_id": "fxc_01JZA3",
+          "posted_at": "2026-07-10T03:40:18.008Z",
+          "value_date": "2026-07-10",
+          "running_balance": "60000.00"
+        }]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/positions",
+      "group": "Trading",
+      "summary": "List positions",
+      "auth": "Bearer",
+      "params": {
+        "account_id": "query"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/orders/preview",
+      "group": "Trading",
+      "summary": "Pre-trade preview — estimated fees, buying power check",
+      "auth": "Bearer",
+      "idempotency_required": true,
+      "body": {
+        "account_id": "string",
+        "symbol": "string — e.g. '0700.HK'",
+        "side": "buy | sell",
+        "order_type": "market | limit | stop | stop_limit | trailing_stop",
+        "qty": "string — decimal (must match lot_size for HK)",
+        "limit_price": "string — required for limit orders",
+        "time_in_force": "day | gtc | ioc | fok"
+      },
+      "response_example": {
+        "data": {
+          "preview_id": "opv_01JZ9",
+          "valid_until": "2026-07-10T03:35:30Z",
+          "estimated_notional": "51000.00",
+          "estimated_fees": {"commission": "102.00", "statutory": "55.28", "total": "157.28", "currency": "HKD"},
+          "estimated_cash_required": "51157.28",
+          "available_cash": "225000.00",
+          "lot_size": 100,
+          "warnings": [],
+          "can_submit": true
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/orders",
+      "group": "Trading",
+      "summary": "Submit order",
+      "auth": "Bearer",
+      "idempotency_required": true,
+      "body": {
+        "account_id": "string",
+        "preview_id": "string — from /orders/preview",
+        "symbol": "string",
+        "side": "buy | sell",
+        "order_type": "market | limit | stop | stop_limit | trailing_stop",
+        "qty": "string",
+        "limit_price": "string",
+        "time_in_force": "day | gtc | ioc | fok",
+        "client_order_id": "string — optional client reference",
+        "outside_rth": "boolean — extended hours",
+        "risk_acknowledgement_id": "string — after warning confirmation"
+      },
+      "response_example": {
+        "data": {
+          "id": "ord_01JZ9D0M4",
+          "client_order_id": "mobile-20260710-0001",
+          "status": "accepted",
+          "symbol": "0700.HK",
+          "side": "buy",
+          "qty": "100",
+          "filled_qty": "0",
+          "remaining_qty": "100",
+          "limit_price": "510.00",
+          "reserved_cash": "51157.28",
+          "created_at": "2026-07-10T03:34:12.110Z",
+          "status_history": [{"status": "received", "at": "2026-07-10T03:34:12.101Z"}, {"status": "accepted", "at": "2026-07-10T03:34:12.110Z"}]
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v3/orders/{order_id}",
+      "group": "Trading",
+      "summary": "Replace/modify order",
+      "auth": "Bearer",
+      "idempotency_required": true,
+      "body": {
+        "limit_price": "string",
+        "qty": "string"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/v3/orders/{order_id}",
+      "group": "Trading",
+      "summary": "Cancel order",
+      "auth": "Bearer",
+      "idempotency_required": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v3/orders",
+      "group": "Trading",
+      "summary": "Cancel all orders",
+      "auth": "Bearer"
+    },
+    {
+      "method": "GET",
+      "path": "/v3/orders",
+      "group": "Trading",
+      "summary": "Order history",
+      "auth": "Bearer",
+      "params": {
+        "account_id": "query",
+        "status": "query — received, accepted, working, partially_filled, filled, cancelled, rejected, expired",
+        "limit": "query — integer (default 50)",
+        "cursor": "query — pagination"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/fills",
+      "group": "Trading",
+      "summary": "Fill history",
+      "auth": "Bearer",
+      "params": {
+        "account_id": "query",
+        "limit": "query — integer"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/fx/rates",
+      "group": "FX",
+      "summary": "Indicative FX rates — bid/ask/mid, multi-source",
+      "auth": "Bearer",
+      "params": {
+        "base": "string — e.g. 'USD'",
+        "quotes": "string — comma-separated (e.g. 'HKD,SGD,EUR')"
+      },
+      "response_example": {
+        "data": {
+          "base": "USD",
+          "rates": [
+            {"quote": "HKD", "bid": "7.8491", "ask": "7.8502", "mid": "7.84965", "as_of": "2026-07-10T03:40:01.101Z"},
+            {"quote": "SGD", "bid": "1.2874", "ask": "1.2880", "mid": "1.2877", "as_of": "2026-07-10T03:40:01.101Z"}
+          ],
+          "source": "upstream_aggregated"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/fx/quotes",
+      "group": "FX",
+      "summary": "Create executable FX quote — mid-market rate, zero fee, zero spread",
+      "auth": "Bearer",
+      "idempotency_required": true,
+      "body": {
+        "account_id": "string",
+        "from_currency": "string — e.g. 'USD'",
+        "to_currency": "string — e.g. 'HKD'",
+        "from_amount": "string — decimal (or to_amount)"
+      },
+      "response_example": {
+        "data": {
+          "quote_id": "fxq_01JZA2",
+          "status": "active",
+          "from_currency": "USD",
+          "to_currency": "HKD",
+          "from_amount": "10000.00",
+          "gross_rate": "7.84965",
+          "client_rate": "7.84500",
+          "spread_bps": "5.92",
+          "fee": {"amount": "2.00", "currency": "USD"},
+          "to_amount": "78450.00",
+          "debit_total": "10002.00",
+          "expires_at": "2026-07-10T03:40:31.500Z"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/fx/conversions",
+      "group": "FX",
+      "summary": "Execute FX conversion — two-step model with quote",
+      "auth": "Bearer",
+      "idempotency_required": true,
+      "body": {
+        "account_id": "string",
+        "quote_id": "string — from /fx/quotes",
+        "client_conversion_id": "string — optional"
+      },
+      "response_example": {
+        "data": {
+          "conversion_id": "fxc_01JZA3",
+          "status": "completed",
+          "from": {"currency": "USD", "amount": "10000.00"},
+          "to": {"currency": "HKD", "amount": "78450.00"},
+          "fee": {"currency": "USD", "amount": "2.00"},
+          "ledger_transaction_id": "ltx_01JZA31",
+          "executed_at": "2026-07-10T03:40:18.008Z"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/funding/deposits",
+      "group": "Funding",
+      "summary": "Create deposit instruction",
+      "auth": "Bearer",
+      "idempotency_required": true,
+      "body": {
+        "account_id": "string",
+        "currency": "string",
+        "expected_amount": "string — decimal",
+        "method": "bank_wire | local_transfer | card",
+        "sender": {"name": "string", "bank_country": "string"},
+        "client_reference": "string — optional"
+      },
+      "response_example": {
+        "data": {
+          "deposit_id": "dep_01JZB1",
+          "status": "awaiting_funds",
+          "currency": "USD",
+          "expected_amount": "50000.00",
+          "bank_instruction": {
+            "beneficiary_name": "EVE FINANCE CLIENT MONEY",
+            "bank_name": "Example Custodian Bank",
+            "account_number_masked": "****9012",
+            "swift": "EXAMPLEXXX",
+            "reference": "EVE-SG-0001028/DEP01JZB1"
+          },
+          "expires_at": "2026-07-17T23:59:59Z"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/funding/deposits/{deposit_id}",
+      "group": "Funding",
+      "summary": "Get deposit status",
+      "auth": "Bearer"
+    },
+    {
+      "method": "POST",
+      "path": "/v3/funding/withdrawals",
+      "group": "Funding",
+      "summary": "Create withdrawal request",
+      "auth": "Bearer",
+      "idempotency_required": true,
+      "body": {
+        "account_id": "string",
+        "currency": "string",
+        "amount": "string — decimal (limited by withdrawable_cash)",
+        "bank_instruction_id": "string",
+        "purpose": "return_of_capital | other"
+      },
+      "response_example": {
+        "data": {
+          "withdrawal_id": "wdr_01JZC2",
+          "status": "pending_approval",
+          "amount": "10000.00",
+          "fee": "15.00",
+          "total_reserved": "10015.00",
+          "currency": "USD",
+          "available_before": "59000.00",
+          "available_after_reservation": "48985.00",
+          "estimated_processing_date": "2026-07-13"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/funding/withdrawals/{withdrawal_id}",
+      "group": "Funding",
+      "summary": "Get withdrawal status",
+      "auth": "Bearer"
+    },
+    {
+      "method": "POST",
+      "path": "/v3/fees/estimate",
+      "group": "Fees",
+      "summary": "Fee estimate — commission, stamp duty, levies",
+      "auth": "Bearer",
+      "body": {
+        "account_id": "string",
+        "operation": "equity_trade | fx_conversion",
+        "symbol": "string",
+        "side": "buy | sell",
+        "qty": "string",
+        "price": "string"
+      },
+      "response_example": {
+        "data": {
+          "currency": "HKD",
+          "notional": "51000.00",
+          "components": [
+            {"code": "COMMISSION", "amount": "102.00", "rate": "0.20%", "beneficiary": "tenant"},
+            {"code": "STAMP_DUTY", "amount": "51.00", "rate": "configured", "beneficiary": "authority"},
+            {"code": "TRADING_FEE", "amount": "2.88", "beneficiary": "exchange"},
+            {"code": "TRANSACTION_LEVY", "amount": "1.38", "beneficiary": "regulator"}
+          ],
+          "total": "157.26",
+          "rule_version": "HK_EQ_FEES_2026-07-01"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/clients",
+      "group": "Admin",
+      "summary": "Create client (before KYC)",
+      "auth": "admin",
+      "idempotency_required": true,
+      "body": {
+        "type": "individual | corporate",
+        "legal_name": "string",
+        "country": "string — ISO 3166",
+        "base_currency": "string — USD, HKD, SGD"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/v3/admin/clients/{client_id}",
+      "group": "Admin",
+      "summary": "Suspend, restrict or update risk tier",
+      "auth": "admin",
+      "params": {
+        "status": "query — active, suspended, restricted",
+        "risk_tier": "query — conservative, moderate, aggressive"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/accounts",
+      "group": "Admin",
+      "summary": "Create trading account",
+      "auth": "admin",
+      "idempotency_required": true,
+      "body": {
+        "client_id": "string",
+        "type": "cash | margin",
+        "base_currency": "string",
+        "permissions": ["US_STOCKS", "HK_STOCKS", "FX_CONVERSION"]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/admin/deposits",
+      "group": "Admin",
+      "summary": "Funding review queue",
+      "auth": "admin",
+      "params": {
+        "status": "query — awaiting_funds, under_review, approved, posted, rejected",
+        "currency": "query",
+        "min_amount": "query — number",
+        "sort": "query — -created_at, etc."
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/deposits/{deposit_id}/approve",
+      "group": "Admin",
+      "summary": "Approve and post deposit",
+      "auth": "admin",
+      "idempotency_required": true,
+      "body": {
+        "approved_amount": "string",
+        "value_date": "date",
+        "bank_transaction_id": "string",
+        "note": "string"
+      },
+      "response_example": {
+        "data": {
+          "deposit_id": "dep_01JZB1",
+          "status": "posted",
+          "posted_amount": "50000.00",
+          "currency": "USD",
+          "ledger_transaction_id": "ltx_01JZB5",
+          "available_at": "2026-07-10T04:00:00Z",
+          "approved_by": "usr_ops_118",
+          "approved_at": "2026-07-10T03:58:41Z"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/admin/withdrawals",
+      "group": "Admin",
+      "summary": "Withdrawal approval queue",
+      "auth": "admin",
+      "params": {
+        "status": "query — pending_approval, approved, processing, sent, completed, rejected"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/withdrawals/{withdrawal_id}/approve",
+      "group": "Admin",
+      "summary": "Approve withdrawal — triggers payment connector",
+      "auth": "admin",
+      "idempotency_required": true
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/ledger-adjustments",
+      "group": "Admin",
+      "summary": "Create controlled adjustment journal — never edit historical entries",
+      "auth": "admin",
+      "idempotency_required": true,
+      "body": {
+        "account_id": "string",
+        "currency": "string",
+        "amount": "string — decimal",
+        "direction": "debit | credit",
+        "reason_code": "PROMOTIONAL_CREDIT | CORRECTION | REVERSAL | etc.",
+        "external_reference": "string",
+        "description": "string",
+        "evidence_urls": ["string"]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/reconciliation/run",
+      "group": "Admin",
+      "summary": "Run bank/broker/ledger reconciliation",
+      "auth": "admin",
+      "idempotency_required": true,
+      "body": {
+        "business_date": "date — e.g. '2026-07-10'",
+        "sources": ["bank", "upstream_broker", "eve_ledger"],
+        "currency": "string"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/admin/reconciliation/breaks",
+      "group": "Admin",
+      "summary": "Query reconciliation breaks",
+      "auth": "admin",
+      "params": {
+        "status": "query — open, resolved",
+        "business_date": "query"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/admin/audit-events",
+      "group": "Admin",
+      "summary": "Immutable audit search",
+      "auth": "admin (audit:read)",
+      "params": {
+        "action": "query",
+        "object_type": "query",
+        "limit": "query — integer"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v3/admin/kill-switch",
+      "group": "Admin",
+      "summary": "Emergency control — block trading, cancel orders",
+      "auth": "admin",
+      "params": {
+        "account_id": "query — scope to account",
+        "tenant_id": "query — scope to tenant",
+        "action": "query — block_new | cancel_all | block_and_cancel"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v3/webhooks",
+      "group": "Webhooks",
+      "summary": "List webhooks",
+      "auth": "Bearer"
+    },
+    {
+      "method": "POST",
+      "path": "/v3/webhooks",
+      "group": "Webhooks",
+      "summary": "Create webhook subscription",
+      "auth": "Bearer",
+      "body": {
+        "url": "string — HTTPS endpoint",
+        "events": ["order.accepted", "order.filled", "deposit.posted", "withdrawal.sent", "fx_conversion.completed"]
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/v3/webhooks/{webhook_id}",
+      "group": "Webhooks",
+      "summary": "Delete webhook",
+      "auth": "Bearer"
+    },
+    {
+      "method": "POST",
+      "path": "/v3/internal/bank-events",
+      "group": "Internal",
+      "summary": "Bank event ingestion — funds detection callback",
+      "auth": "bank_connector_token",
+      "idempotency_required": true,
+      "body": {
+        "external_transaction_id": "string",
+        "value_date": "date",
+        "currency": "string",
+        "amount": "string — decimal",
+        "credit_debit": "credit | debit",
+        "reference": "string — matches deposit instruction",
+        "sender_name": "string"
+      }
+    },
+    {
+      "protocol": "WebSocket",
+      "path": "/v3/ws",
+      "group": "Streaming",
+      "summary": "Real-time order, position and quote updates",
+      "auth": "Bearer token",
+      "subscribe_example": {
+        "action": "subscribe",
+        "channels": ["orders:acc_01JZ8", "positions:acc_01JZ8", "quotes:AAPL,0700.HK"]
+      },
+      "message_example": {
+        "channel": "orders:acc_01JZ8",
+        "sequence": 9182,
+        "event": "order.filled",
+        "data": {"order_id": "ord_...", "filled_qty": "100"}
+      }
+    }
+  ],
+  "webhook_events": [
+    "order.accepted", "order.rejected",
+    "order.partially_filled", "order.filled",
+    "order.cancelled",
+    "deposit.detected", "deposit.posted", "deposit.reversed",
+    "withdrawal.approved", "withdrawal.sent", "withdrawal.failed",
+    "fx_conversion.completed", "fx_conversion.failed",
+    "account.restricted",
+    "reconciliation.break_created", "reconciliation.resolved"
+  ],
+  "webhook_signature": {
+    "headers": {
+      "X-EVE-Event-ID": "evt_01JZD1",
+      "X-EVE-Timestamp": "1783655400",
+      "X-EVE-Signature": "v1=4b0e..."
+    },
+    "verification": "HMAC_SHA256(webhook_secret, timestamp + '.' + raw_body)",
+    "replay_protection": "Reject when timestamp drift > 300 seconds"
+  },
+  "error_codes": {
+    "400": {"code": "INVALID_REQUEST", "message": "Malformed JSON or incompatible fields"},
+    "401": {"code": "AUTHENTICATION_REQUIRED", "message": "Missing/expired token"},
+    "403": {"code": "PERMISSION_DENIED", "message": "Scope or trading permission missing"},
+    "404": {"code": "RESOURCE_NOT_FOUND", "message": "Object not found in authorized tenant"},
+    "409": {"code": "IDEMPOTENCY_CONFLICT", "message": "Same key reused with different payload"},
+    "409": {"code": "ORDER_NOT_MODIFIABLE", "message": "Final or upstream-locked order"},
+    "422": {"code": "INVALID_LOT_SIZE", "message": "Quantity violates asset lot rule"},
+    "422": {"code": "INSUFFICIENT_BUYING_POWER", "message": "Available funds below required amount"},
+    "422": {"code": "FX_QUOTE_EXPIRED", "message": "Request a new executable quote"},
+    "423": {"code": "ACCOUNT_RESTRICTED", "message": "Risk/compliance hold"},
+    "429": {"code": "RATE_LIMITED", "message": "Retry after Retry-After header"},
+    "502": {"code": "UPSTREAM_UNAVAILABLE", "message": "Retryable broker/bank dependency failure"}
+  },
+  "order_status_machine": {
+    "received": {"terminal": false, "meaning": "API accepted payload"},
+    "pending_review": {"terminal": false, "meaning": "Risk warning or manual review"},
+    "accepted": {"terminal": false, "meaning": "Accepted by EVE/upstream"},
+    "working": {"terminal": false, "meaning": "Active at venue"},
+    "partially_filled": {"terminal": false, "meaning": "Some quantity filled"},
+    "filled": {"terminal": true, "meaning": "All quantity filled"},
+    "cancel_pending": {"terminal": false, "meaning": "Cancel requested"},
+    "cancelled": {"terminal": true, "meaning": "Cancellation confirmed"},
+    "rejected": {"terminal": true, "meaning": "Not accepted"},
+    "expired": {"terminal": true, "meaning": "TIF or venue expiry"}
+  },
+  "funding_state_machines": {
+    "deposit": "created → awaiting_funds → funds_detected → under_review → approved → posted → completed (↘ rejected / expired / reversed)",
+    "withdrawal": "created → pending_approval → approved → processing → sent → completed (↘ rejected / cancelled / failed / reversed)"
+  },
+  "balance_types": {
+    "total_cash": "All posted cash, including unsettled amounts",
+    "settled_cash": "Cash whose settlement date has passed",
+    "available_cash": "Cash available after open-order, withdrawal and risk reserves",
+    "withdrawable_cash": "Cash eligible for withdrawal after settlement, holds and margin rules",
+    "reserved_cash": "Cash reserved for open orders, pending withdrawals, fees or compliance hold",
+    "pending_in": "Approved/identified incoming funds not yet posted",
+    "pending_out": "Outgoing amount initiated but not fully settled"
+  },
+  "money_type": {
+    "currency": "ISO 4217 (e.g. USD, HKD)",
+    "amount": "decimal string (e.g. '12345.67') — never binary floating point"
+  },
+  "hk_trading_rules": {
+    "lot_size": "Issuer-specific — must retrieve from asset master, NOT a global 100-share constant",
+    "tick_size": "Dynamic from tick_size_rule_id",
+    "odd_lot": "Most HK stocks do NOT support odd lots",
+    "fractional": "HK stocks: not supported; US stocks: supported"
+  },
+  "anonymous_mode": {
+    "description": "No key needed — direct access",
+    "examples": [
+      "curl https://sub.readinghero.xyz/eve-finance/v3/accounts",
+      "curl https://sub.readinghero.xyz/eve-finance/v3/assets?query=0700",
+      "curl -X POST https://sub.readinghero.xyz/eve-finance/v3/orders -H 'Content-Type: application/json' -d '{\"account_id\":\"acc_...\",\"symbol\":\"0700.HK\",\"side\":\"buy\",\"qty\":\"100\"}'"
+    ]
+  },
+  "database_entities": {
+    "tenants": "id, name, status, fee_plan_id, branding_config",
+    "clients": "id, tenant_id, legal_type, kyc_status, risk_tier",
+    "users": "id, client_id, role, mfa_status",
+    "accounts": "id, client_id, type, base_currency, status",
+    "assets": "asset_id, symbol, exchange, currency, lot_size, tick_rule, permissions",
+    "orders": "id, account_id, idempotency_key, status, upstream_id, version",
+    "fills": "id, order_id, qty, price, fee, trade_date, settlement_date",
+    "ledger_transactions": "id, journal_type, status, value_date, reference",
+    "ledger_entries": "id, transaction_id, ledger_account_id, debit/credit, amount, currency",
+    "funding_instructions": "id, type, status, bank_instruction, external_id",
+    "fx_quotes": "id, pair, market_rate, client_rate, fee, expires_at",
+    "fx_conversions": "id, quote_id, status, ledger_transaction_id",
+    "fee_rules": "id, scope, formula, rounding, effective_from/to, version",
+    "audit_events": "id, actor, action, object, before/after hash, request_id"
+  },
+  "summary": {
+    "total_endpoints": 42,
+    "groups": ["Authentication", "System", "Market Data", "Accounts", "Trading", "FX", "Funding", "Fees", "Admin", "Webhooks", "Internal", "Streaming"],
+    "design_principle": "Double-entry ledger, immutable money movements, idempotent writes, webhook/event-driven processing"
+  }
+}
