@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TrendingUp, Users, DollarSign, Activity, Download, Calendar, RefreshCw } from "lucide-react";
-import { generateReport } from "@/functions/generateReport";
+import { generateReport } from "@/api/eveClient";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/components/common/LanguageProvider";
 

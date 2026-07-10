@@ -13,9 +13,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { getMetalPrices } from "@/functions/getMetalPrices";
-import { getStockPrices } from "@/functions/getStockPrices";
-import { getUserTransactions } from "@/functions/getUserTransactions";
+import { getMetalPrices, getStockPrices, getUserTransactions } from "@/api/eveClient";
 
 import BalanceCards from "../components/wallet/BalanceCards";
 import TransactionHistory from "../components/wallet/TransactionHistory";

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { getMetalPrices } from "@/functions/getMetalPrices";
+import { getMetalPrices } from "@/api/eveClient";
 
 export default function MarketTicker() {
   const [prices, setPrices] = useState({

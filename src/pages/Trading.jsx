@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Zap } from "lucide-react";
 import { motion } from "framer-motion";
-import { getMetalPrices } from "@/functions/getMetalPrices";
+import { getMetalPrices } from "@/api/eveClient";
 
 import SwapInterface from "../components/trading/SwapInterface";
 import TradingViewChart from "../components/trading/TradingViewChart";

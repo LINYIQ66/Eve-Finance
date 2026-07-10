@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, Transaction } from "@/entities/all";
-import { getUserTransactions } from "@/functions/getUserTransactions";
+import { getUserTransactions } from "@/api/eveClient";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Zap } from "lucide-react";
 import { motion } from "framer-motion";

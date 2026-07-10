@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Plus, Check, X } from "lucide-react";
-import { searchHKStocks } from "@/functions/searchHKStocks";
+import { searchHKStocks } from "@/api/eveClient";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function HKStockSearch({ onAdd, addedSymbols = [] }) {

@@ -3,8 +3,7 @@ import { User, Stake, Transaction } from "@/entities/all";
 import { Card, CardContent } from "@/components/ui/card";
 import { PiggyBank, DollarSign, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
-import { getMetalPrices } from "@/functions/getMetalPrices";
-import { unstakeAndClaim } from "@/functions/unstakeAndClaim"; // New import
+import { getMetalPrices, unstakeAndClaim } from "@/api/eveClient";
 
 import StakeForm from "../components/staking/StakeForm";
 import ActiveStakes from "../components/staking/ActiveStakes";

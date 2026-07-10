@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, RefreshCw, Star, X } from "lucide-react";
-import { getStockPrices } from "@/functions/getStockPrices";
-import { getAlpacaPrices } from "@/functions/getAlpacaPrices";
+import { getStockPrices, getAlpacaPrices } from "@/api/eveClient";
 import { User } from "@/entities/all";
 import StockSearch from "./StockSearch";
 

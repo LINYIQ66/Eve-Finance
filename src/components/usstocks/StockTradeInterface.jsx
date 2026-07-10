@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, CheckCircle, TrendingUp, TrendingDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getStockPrices } from "@/functions/getStockPrices";
+import { getStockPrices } from "@/api/eveClient";
 
 const FEE_RATE = 0.001; // 0.1%
 

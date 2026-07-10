@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { agentSDK } from "@/agents";
-import { getDailyAgentName } from "@/functions/getDailyAgentName";
+import { getDailyAgentName } from "@/api/eveClient";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import ChatWindow from "./ChatWindow";

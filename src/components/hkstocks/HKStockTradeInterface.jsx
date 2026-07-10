@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, CheckCircle, TrendingUp, TrendingDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getHKStockPrices } from "@/functions/getHKStockPrices";
+import { getHKStockPrices } from "@/api/eveClient";
 
 const FEE_RATE = 0.001; // 0.1%
 

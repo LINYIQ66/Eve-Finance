@@ -10,7 +10,7 @@ import {
   Calculator
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { getMetalPrices } from "@/functions/getMetalPrices";
+import { getMetalPrices } from "@/api/eveClient";
 
 import LoanCalculator from "../components/lending/LoanCalculator";
 import ActiveLoans from "../components/lending/ActiveLoans";

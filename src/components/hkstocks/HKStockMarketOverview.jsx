@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, RefreshCw, Star, X } from "lucide-react";
-import { getHKStockPrices } from "@/functions/getHKStockPrices";
+import { getHKStockPrices } from "@/api/eveClient";
 import { User } from "@/entities/all";
 import HKStockSearch from "./HKStockSearch";
 
